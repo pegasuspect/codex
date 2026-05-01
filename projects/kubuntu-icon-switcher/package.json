@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "kubuntu-icon-switcher": "./dist/cli.js"
+    "kubuntu-icon-switcher": "./dist/src/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -12,7 +12,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "audit": "npm audit"
+    "audit": "npm audit",
+    "phase1": "npm run build && node dist/src/cli.js phase1 --icon assets/firefox-dog.png",
+    "phase1:dry-run": "npm run build && node dist/src/cli.js phase1 --icon assets/firefox-dog.png --dry-run"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
@@ -25,4 +27,3 @@
     "vitest": "^3.1.2"
   }
 }
-

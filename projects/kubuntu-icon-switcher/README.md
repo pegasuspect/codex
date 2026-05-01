@@ -49,13 +49,20 @@ npm audit
 Phase 1 command after build:
 
 ```bash
-node dist/cli.js phase1 --icon assets/firefox-dog.png
+node dist/src/cli.js phase1 --icon assets/firefox-dog.png
 ```
 
 Dry run:
 
 ```bash
-node dist/cli.js phase1 --icon assets/firefox-dog.png --dry-run
+node dist/src/cli.js phase1 --icon assets/firefox-dog.png --dry-run
+```
+
+The easier commands build first, then run the CLI:
+
+```bash
+npm run phase1:dry-run
+npm run phase1
 ```
 
 ## Testing
@@ -90,4 +97,3 @@ npm audit
 Panel launchers may need to be unpinned and pinned again if Plasma has cached a
 specific desktop-entry identity. The first implementation avoids editing panel
 configuration directly because that is more fragile across Plasma versions.
-
