@@ -8,15 +8,15 @@ export default tseslint.config(
   ...tseslint.configs.stylisticTypeChecked,
   prettier,
   {
-    files: ['src/**/*.ts', 'test/**/*.ts'],
+    files: ['extension-src/**/*.ts', 'src/**/*.ts', 'test/**/*.ts'],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        project: ['./tsconfig.json', './tsconfig.extension.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
   {
-    ignores: ['dist/**', 'coverage/**', 'eslint.config.js'],
+    ignores: ['dist/**', 'extension/dist/**', 'coverage/**', 'eslint.config.js'],
   },
 );

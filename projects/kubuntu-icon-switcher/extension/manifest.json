@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "Kubuntu Icon Switcher Artwork Bridge",
+  "version": "0.1.0",
+  "description": "Emits page artwork URLs to the Kubuntu Icon Switcher native host.",
+  "permissions": ["nativeMessaging", "tabs", "https://open.spotify.com/*"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "kubuntu-icon-switcher@codex.local",
+      "strict_min_version": "109.0"
+    }
+  },
+  "background": {
+    "scripts": ["dist/background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://open.spotify.com/*"],
+      "js": ["dist/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

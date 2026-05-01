@@ -78,6 +78,45 @@ MPRIS. It reads the current `mpris:artUrl`, caches the image under
 `~/.cache/kubuntu-icon-switcher`, then points the user-local Firefox desktop
 entry at the cached album art. The CLI tries `qdbus6` first, then `qdbus`.
 
+Firefox bridge commands:
+
+```bash
+npm run install-firefox-host
+npm run watch-firefox
+npm run watch-firefox:dry-run
+```
+
+The Firefox bridge is the preferred path when Spotify MPRIS is unavailable.
+
+Architecture:
+
+1. The WebExtension in `extension/` runs on `https://open.spotify.com/*`.
+2. Its content script detects Spotify artwork image URLs.
+3. Its background script sends the latest artwork URL to the native messaging
+   host `codex_kubuntu_icon_switcher`.
+4. The native host writes the latest state file to
+   `~/.cache/kubuntu-icon-switcher/firefox-artwork.json`.
+5. `watch-firefox` watches that state file, caches the artwork image, and
+   applies the same user-local Firefox desktop-entry icon override used by
+   phase 1.
+
+Setup:
+
+```bash
+npm run build
+npm run install-firefox-host
+```
+
+Then load `extension/manifest.json` in Firefox through `about:debugging` as a
+temporary add-on for local development. Start the watcher:
+
+```bash
+npm run watch-firefox
+```
+
+Open Spotify Web Player in Firefox. When the extension emits new artwork, the
+watcher updates the Firefox launcher icon to the cached image.
+
 ## Testing
 
 Unit tests cover desktop-entry parsing and icon override planning. End-to-end

@@ -7,8 +7,12 @@
     "kubuntu-icon-switcher": "./dist/src/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "npm run build:cli && npm run build:extension",
+    "build:cli": "tsc -p tsconfig.json",
+    "build:extension": "tsc -p tsconfig.extension.json",
+    "typecheck": "npm run typecheck:cli && npm run typecheck:extension",
+    "typecheck:cli": "tsc -p tsconfig.json --noEmit",
+    "typecheck:extension": "tsc -p tsconfig.extension.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
@@ -17,7 +21,10 @@
     "phase1:dry-run": "npm run build && node dist/src/cli.js phase1 --icon assets/firefox-dog.png --dry-run",
     "phase2": "npm run build && node dist/src/cli.js phase2",
     "phase2:dry-run": "npm run build && node dist/src/cli.js phase2 --dry-run",
-    "spotify-art": "npm run build && node dist/src/cli.js spotify-art"
+    "spotify-art": "npm run build && node dist/src/cli.js spotify-art",
+    "install-firefox-host": "npm run build && node dist/src/cli.js install-firefox-host",
+    "watch-firefox": "npm run build && node dist/src/cli.js watch-firefox",
+    "watch-firefox:dry-run": "npm run build && node dist/src/cli.js watch-firefox --dry-run"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
