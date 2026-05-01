@@ -3,9 +3,13 @@ import { setDesktopEntryIcon } from '../src/desktopEntry.js';
 
 describe('setDesktopEntryIcon', () => {
   it('replaces the icon in the desktop entry section', () => {
-    const content = ['[Desktop Entry]', 'Name=Firefox', 'Icon=firefox', '', '[Desktop Action New]'].join(
-      '\n',
-    );
+    const content = [
+      '[Desktop Entry]',
+      'Name=Firefox',
+      'Icon=firefox',
+      '',
+      '[Desktop Action New]',
+    ].join('\n');
 
     expect(setDesktopEntryIcon(content, '/tmp/dog.png')).toBe(
       ['[Desktop Entry]', 'Name=Firefox', 'Icon=/tmp/dog.png', '', '[Desktop Action New]'].join(
@@ -24,4 +28,3 @@ describe('setDesktopEntryIcon', () => {
     );
   });
 });
-

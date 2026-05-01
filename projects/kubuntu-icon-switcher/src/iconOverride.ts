@@ -15,6 +15,14 @@ export interface BuildPhase1PlanInput {
   xdgDataHome?: string;
 }
 
+export interface BuildIconOverridePlanInput {
+  desktopId?: string;
+  homeDirectory?: string;
+  iconName?: string;
+  iconPath: string;
+  xdgDataHome?: string;
+}
+
 export interface IconOverridePlan {
   rewriteDesktopEntry: (content: string) => string;
   sourceDesktopPath: string;
@@ -24,6 +32,12 @@ export interface IconOverridePlan {
 }
 
 export async function buildPhase1Plan(input: BuildPhase1PlanInput): Promise<IconOverridePlan> {
+  return buildIconOverridePlan(input);
+}
+
+export async function buildIconOverridePlan(
+  input: BuildIconOverridePlanInput,
+): Promise<IconOverridePlan> {
   const homeDirectory = requireHome(input.homeDirectory);
   const xdgDataHome = input.xdgDataHome ?? join(homeDirectory, '.local', 'share');
   const desktopId = input.desktopId ?? (await findFirefoxDesktopId(DEFAULT_FIREFOX_DESKTOP_IDS));
@@ -33,7 +47,7 @@ export async function buildPhase1Plan(input: BuildPhase1PlanInput): Promise<Icon
     xdgDataHome,
     'icons',
     'codex-kubuntu-icon-switcher',
-    basename(input.iconPath),
+    input.iconName ?? basename(input.iconPath),
   );
 
   return {
@@ -71,4 +85,3 @@ function requireHome(homeDirectory: string | undefined): string {
 
   return homeDirectory;
 }
-

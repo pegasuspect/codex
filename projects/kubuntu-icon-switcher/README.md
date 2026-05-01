@@ -65,6 +65,19 @@ npm run phase1:dry-run
 npm run phase1
 ```
 
+Phase 2 commands:
+
+```bash
+npm run spotify-art
+npm run phase2:dry-run
+npm run phase2
+```
+
+`phase2` requires Spotify to be running and exposing current track metadata over
+MPRIS. It reads the current `mpris:artUrl`, caches the image under
+`~/.cache/kubuntu-icon-switcher`, then points the user-local Firefox desktop
+entry at the cached album art. The CLI tries `qdbus6` first, then `qdbus`.
+
 ## Testing
 
 Unit tests cover desktop-entry parsing and icon override planning. End-to-end

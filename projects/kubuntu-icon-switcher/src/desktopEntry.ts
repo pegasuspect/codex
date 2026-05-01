@@ -21,4 +21,3 @@ export function setDesktopEntryIcon(content: string, iconPath: string): string {
   lines.splice(desktopEntryEnd, 0, `Icon=${iconPath}`);
   return lines.join('\n');
 }
-

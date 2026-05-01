@@ -2,11 +2,12 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { buildPhase1Plan, type IconOverridePlan } from './iconOverride.js';
+import { albumArtCacheDirectory, plannedAlbumArtPath, resolveAlbumArt } from './albumArt.js';
+import { buildIconOverridePlan, buildPhase1Plan, type IconOverridePlan } from './iconOverride.js';
 import { refreshKdeServiceCache } from './kde.js';
 import { readSpotifyAlbumArt } from './spotify.js';
 
-type Command = 'phase1' | 'spotify-art' | 'help';
+type Command = 'phase1' | 'phase2' | 'spotify-art' | 'help';
 
 async function main(): Promise<void> {
   const [command = 'help', ...rest] = process.argv.slice(2);
@@ -24,6 +25,32 @@ async function main(): Promise<void> {
     const options = parsePhase1Options(rest);
     const plan = await buildPhase1Plan({
       iconPath: resolve(options.icon),
+      desktopId: options.desktopId,
+      homeDirectory: process.env.HOME,
+      xdgDataHome: process.env.XDG_DATA_HOME,
+    });
+
+    await applyPlan(plan, options.dryRun);
+    return;
+  }
+
+  if (command === 'phase2') {
+    const options = parsePhase2Options(rest);
+    const albumArtUrl = await readSpotifyAlbumArt();
+
+    if (!albumArtUrl) {
+      throw new Error('Spotify album art is not currently available.');
+    }
+
+    const cacheDirectory = albumArtCacheDirectory(process.env.HOME);
+    const albumArtPath = options.dryRun
+      ? plannedAlbumArtPath(albumArtUrl, cacheDirectory)
+      : await resolveAlbumArt({
+          artUrl: albumArtUrl,
+          cacheDirectory,
+        });
+    const plan = await buildIconOverridePlan({
+      iconPath: albumArtPath,
       desktopId: options.desktopId,
       homeDirectory: process.env.HOME,
       xdgDataHome: process.env.XDG_DATA_HOME,
@@ -62,6 +89,24 @@ function parsePhase1Options(args: string[]): {
   };
 }
 
+function parsePhase2Options(args: string[]): {
+  desktopId?: string;
+  dryRun: boolean;
+} {
+  const parsed = parseArgs({
+    args,
+    options: {
+      'desktop-id': { type: 'string' },
+      'dry-run': { type: 'boolean', default: false },
+    },
+  });
+
+  return {
+    desktopId: parsed.values['desktop-id'],
+    dryRun: parsed.values['dry-run'],
+  };
+}
+
 async function applyPlan(plan: IconOverridePlan, dryRun: boolean): Promise<void> {
   console.log(`Source desktop entry: ${plan.sourceDesktopPath}`);
   console.log(`User desktop entry: ${plan.targetDesktopPath}`);
@@ -89,12 +134,13 @@ async function applyPlan(plan: IconOverridePlan, dryRun: boolean): Promise<void>
 }
 
 function isCommand(value: string): value is Command {
-  return value === 'phase1' || value === 'spotify-art' || value === 'help';
+  return value === 'phase1' || value === 'phase2' || value === 'spotify-art' || value === 'help';
 }
 
 function printHelp(): void {
   console.log(`Usage:
   kubuntu-icon-switcher phase1 --icon assets/firefox-dog.png [--desktop-id firefox.desktop] [--dry-run]
+  kubuntu-icon-switcher phase2 [--desktop-id firefox.desktop] [--dry-run]
   kubuntu-icon-switcher spotify-art
 `);
 }

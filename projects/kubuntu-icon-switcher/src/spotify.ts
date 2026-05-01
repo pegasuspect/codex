@@ -1,32 +1,44 @@
 import { spawn } from 'node:child_process';
 
+const SPOTIFY_SERVICE = 'org.mpris.MediaPlayer2.spotify';
+const SPOTIFY_PATH = '/org/mpris/MediaPlayer2';
+const SPOTIFY_METADATA_PROPERTY = 'org.mpris.MediaPlayer2.Player.Metadata';
+
 export async function readSpotifyAlbumArt(): Promise<string | null> {
-  const output = await runQdbus([
-    'org.mpris.MediaPlayer2.spotify',
-    '/org/mpris/MediaPlayer2',
-    'org.freedesktop.DBus.Properties.Get',
-    'org.mpris.MediaPlayer2.Player',
-    'Metadata',
-  ]);
+  const output = await readSpotifyMetadata();
 
   return parseMprisArtUrl(output);
 }
 
 export function parseMprisArtUrl(output: string): string | null {
-  const lines = output.split(/\r?\n/);
-  const artLine = lines.find((line) => line.includes('mpris:artUrl'));
+  const artKeyIndex = output.indexOf('mpris:artUrl');
 
-  if (!artLine) {
+  if (artKeyIndex === -1) {
     return null;
   }
 
-  const urlMatch = /(file:\/\/\S+|https?:\/\/\S+)/.exec(artLine);
+  const outputAfterArtKey = output.slice(artKeyIndex);
+  const urlMatch = /(file:\/\/[^\s'")]+|https?:\/\/[^\s'")]+)/.exec(outputAfterArtKey);
   return urlMatch?.[1] ?? null;
 }
 
-function runQdbus(args: string[]): Promise<string> {
+async function readSpotifyMetadata(): Promise<string> {
+  const errors: string[] = [];
+
+  for (const command of ['qdbus6', 'qdbus']) {
+    try {
+      return await runQdbus(command, [SPOTIFY_SERVICE, SPOTIFY_PATH, SPOTIFY_METADATA_PROPERTY]);
+    } catch (error) {
+      errors.push(formatError(command, error));
+    }
+  }
+
+  throw new Error(`Could not read Spotify MPRIS metadata.\n${errors.join('\n')}`);
+}
+
+function runQdbus(command: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn('qdbus', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
 
@@ -43,4 +55,9 @@ function runQdbus(args: string[]): Promise<string> {
       reject(new Error(Buffer.concat(stderr).toString('utf8') || `qdbus exited with ${exitCode}`));
     });
   });
+}
+
+function formatError(command: string, error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `${command}: ${message.trim()}`;
 }

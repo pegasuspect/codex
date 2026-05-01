@@ -14,7 +14,10 @@
     "test": "vitest run",
     "audit": "npm audit",
     "phase1": "npm run build && node dist/src/cli.js phase1 --icon assets/firefox-dog.png",
-    "phase1:dry-run": "npm run build && node dist/src/cli.js phase1 --icon assets/firefox-dog.png --dry-run"
+    "phase1:dry-run": "npm run build && node dist/src/cli.js phase1 --icon assets/firefox-dog.png --dry-run",
+    "phase2": "npm run build && node dist/src/cli.js phase2",
+    "phase2:dry-run": "npm run build && node dist/src/cli.js phase2 --dry-run",
+    "spotify-art": "npm run build && node dist/src/cli.js spotify-art"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
