@@ -16,15 +16,27 @@ cd /home/pegasuspect/projects/codex/projects/kubuntu-icon-switcher
 npm run install-firefox-host
 ```
 
-## Install with Script
+## Install or Repair with Script
 
 The project includes an installer script that installs the native host, writes
-the user-level systemd service, reloads systemd, and enables and starts the
-watcher:
+the user-level systemd service, reloads systemd, enables autostart, and restarts
+the watcher:
 
 ```bash
 ./install-service.zsh
 ```
+
+The script is safe to run again. Each run:
+
+1. Rebuilds and installs the Firefox native messaging host.
+2. Rewrites the same service file at
+   `~/.config/systemd/user/kubuntu-icon-switcher.service`.
+3. Reloads user systemd units.
+4. Enables the service for login autostart.
+5. Restarts the watcher service.
+6. Prints whether the service is enabled and active.
+
+It does not create duplicate services.
 
 ## Create the Service
 
@@ -57,7 +69,8 @@ WantedBy=default.target
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now kubuntu-icon-switcher.service
+systemctl --user enable kubuntu-icon-switcher.service
+systemctl --user restart kubuntu-icon-switcher.service
 ```
 
 ## Check Logs

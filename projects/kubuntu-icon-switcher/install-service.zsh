@@ -20,7 +20,7 @@ fi
 print "Installing Firefox native messaging host..."
 (
   cd "$project_directory"
-  npm run install-firefox-host
+  "$npm_path" run install-firefox-host
 )
 
 print "Writing user systemd service to $service_path..."
@@ -45,9 +45,15 @@ SERVICE
 print "Reloading user systemd units..."
 systemctl --user daemon-reload
 
-print "Enabling and starting $service_name..."
-systemctl --user enable --now "$service_name"
+print "Enabling $service_name for login autostart..."
+systemctl --user enable "$service_name"
 
-print "Service installed and started."
+print "Restarting $service_name..."
+systemctl --user reset-failed "$service_name" >/dev/null 2>&1 || true
+systemctl --user restart "$service_name"
+
+print "Service installed, enabled, and restarted."
+print "Enabled state: $(systemctl --user is-enabled "$service_name")"
+print "Active state: $(systemctl --user is-active "$service_name")"
 print "View logs with:"
 print "  journalctl --user -u $service_name -f"

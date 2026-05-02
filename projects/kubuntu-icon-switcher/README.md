@@ -151,10 +151,12 @@ Run the watcher automatically at login with a user-level systemd service:
 ./install-service.zsh
 ```
 
-The installer writes
-`~/.config/systemd/user/kubuntu-icon-switcher.service`, installs the Firefox
-native messaging host, reloads user systemd units, and enables and starts the
-watcher service. See [SERVICE.md](./SERVICE.md) for the full service definition.
+The installer is safe to run again. It installs the Firefox native messaging
+host, rewrites the single user service at
+`~/.config/systemd/user/kubuntu-icon-switcher.service`, reloads user systemd
+units, enables login autostart, restarts the watcher, and prints service status.
+It does not create duplicate services. See [SERVICE.md](./SERVICE.md) for the
+full service definition.
 
 Check service logs:
 
