@@ -145,6 +145,35 @@ Start the watcher:
 npm run watch-firefox
 ```
 
+Run the watcher automatically at login with a user-level systemd service:
+
+```bash
+./install-service.zsh
+```
+
+The installer writes
+`~/.config/systemd/user/kubuntu-icon-switcher.service`, installs the Firefox
+native messaging host, reloads user systemd units, and enables and starts the
+watcher service. See [SERVICE.md](./SERVICE.md) for the full service definition.
+
+Check service logs:
+
+```bash
+journalctl --user -u kubuntu-icon-switcher.service -f
+```
+
+Stop the service:
+
+```bash
+systemctl --user stop kubuntu-icon-switcher.service
+```
+
+Disable autostart:
+
+```bash
+systemctl --user disable kubuntu-icon-switcher.service
+```
+
 Open Spotify Web Player in Firefox. When the extension emits new artwork, the
 watcher updates the Firefox launcher icon to the cached image.
 
