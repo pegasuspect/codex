@@ -2,3 +2,4 @@ coverage/
 dist/
 extension/dist/
 node_modules/
+release/*.xpi

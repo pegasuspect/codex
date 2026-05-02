@@ -82,6 +82,7 @@ Firefox bridge commands:
 
 ```bash
 npm run install-firefox-host
+npm run package:firefox
 npm run watch-firefox
 npm run watch-firefox:dry-run
 ```
@@ -105,10 +106,21 @@ Setup:
 ```bash
 npm run build
 npm run install-firefox-host
+npm run package:firefox
 ```
 
-Then load `extension/manifest.json` in Firefox through `about:debugging` as a
-temporary add-on for local development. Start the watcher:
+The package command creates:
+
+```text
+release/kubuntu-icon-switcher-artwork-bridge.xpi
+```
+
+For local development, load `extension/manifest.json` in Firefox through
+`about:debugging` as a temporary add-on. For persistent install, install the XPI
+in a Firefox build/profile that accepts unsigned local extensions, or submit the
+XPI for Mozilla signing and install the signed build in standard Firefox.
+
+Start the watcher:
 
 ```bash
 npm run watch-firefox

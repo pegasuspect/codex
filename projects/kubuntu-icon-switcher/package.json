@@ -21,6 +21,7 @@
     "phase1:dry-run": "npm run build && node dist/src/cli.js phase1 --icon assets/firefox-dog.png --dry-run",
     "phase2": "npm run build && node dist/src/cli.js phase2",
     "phase2:dry-run": "npm run build && node dist/src/cli.js phase2 --dry-run",
+    "package:firefox": "npm run build && node dist/src/packageFirefoxAddon.js",
     "spotify-art": "npm run build && node dist/src/cli.js spotify-art",
     "install-firefox-host": "npm run build && node dist/src/cli.js install-firefox-host",
     "watch-firefox": "npm run build && node dist/src/cli.js watch-firefox",
