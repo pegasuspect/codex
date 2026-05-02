@@ -3,7 +3,7 @@ import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { albumArtCacheDirectory, plannedAlbumArtPath, resolveAlbumArt } from './albumArt.js';
 import { firefoxArtworkStatePath, readFirefoxArtworkState } from './firefoxArtworkState.js';
-import { buildIconOverridePlan } from './iconOverride.js';
+import { buildIconOverridePlan, buildRestoreIconPlan } from './iconOverride.js';
 import { refreshKdeServiceCache } from './kde.js';
 
 export interface WatchFirefoxArtworkInput {
@@ -18,6 +18,23 @@ export interface WatchFirefoxArtworkInput {
 export async function watchFirefoxArtwork(input: WatchFirefoxArtworkInput): Promise<void> {
   const statePath = input.statePath ?? firefoxArtworkStatePath(input.homeDirectory);
   let lastAppliedArtworkUrl: string | null = null;
+  let originalIconRestored = false;
+
+  const restoreOriginalIcon = async (): Promise<void> => {
+    if (originalIconRestored) {
+      return;
+    }
+
+    const plan = await buildRestoreIconPlan({
+      desktopId: input.desktopId,
+      homeDirectory: input.homeDirectory,
+      xdgDataHome: input.xdgDataHome,
+    });
+
+    await applyFirefoxArtworkPlan(plan, input.dryRun);
+    lastAppliedArtworkUrl = null;
+    originalIconRestored = true;
+  };
 
   const applyLatestState = async (): Promise<void> => {
     if (!existsSync(statePath)) {
@@ -26,6 +43,16 @@ export async function watchFirefoxArtwork(input: WatchFirefoxArtworkInput): Prom
     }
 
     const state = await readFirefoxArtworkState(statePath);
+
+    if (!state.isPlaying) {
+      await restoreOriginalIcon();
+      return;
+    }
+
+    if (!state.artworkUrl) {
+      console.log('Firefox reports playback, but no artwork URL is available yet.');
+      return;
+    }
 
     if (state.artworkUrl === lastAppliedArtworkUrl) {
       return;
@@ -47,6 +74,7 @@ export async function watchFirefoxArtwork(input: WatchFirefoxArtworkInput): Prom
 
     await applyFirefoxArtworkPlan(plan, input.dryRun);
     lastAppliedArtworkUrl = state.artworkUrl;
+    originalIconRestored = false;
   };
 
   await applyLatestState();
@@ -61,7 +89,31 @@ export async function watchFirefoxArtwork(input: WatchFirefoxArtworkInput): Prom
       console.error(message);
     });
   });
+  installRestoreOnExitHandlers(restoreOriginalIcon);
   console.log(`Watching Firefox artwork state: ${statePath}`);
+}
+
+function installRestoreOnExitHandlers(restoreOriginalIcon: () => Promise<void>): void {
+  let isRestoring = false;
+
+  const restoreAndExit = (signal: NodeJS.Signals): void => {
+    if (isRestoring) {
+      return;
+    }
+
+    isRestoring = true;
+    restoreOriginalIcon()
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(message);
+      })
+      .finally(() => {
+        process.kill(process.pid, signal);
+      });
+  };
+
+  process.once('SIGINT', restoreAndExit);
+  process.once('SIGTERM', restoreAndExit);
 }
 
 async function applyFirefoxArtworkPlan(

@@ -21,6 +21,7 @@ describe('Firefox artwork state', () => {
     await writeFirefoxArtworkState(statePath, {
       artworkUrl: 'https://i.scdn.co/image/example',
       emittedAt: '2026-05-01T00:00:00.000Z',
+      isPlaying: true,
       pageUrl: 'https://open.spotify.com/track/example',
       source: 'spotify-web',
       title: 'Example',
@@ -29,6 +30,7 @@ describe('Firefox artwork state', () => {
     await expect(readFirefoxArtworkState(statePath)).resolves.toEqual({
       artworkUrl: 'https://i.scdn.co/image/example',
       emittedAt: '2026-05-01T00:00:00.000Z',
+      isPlaying: true,
       pageUrl: 'https://open.spotify.com/track/example',
       source: 'spotify-web',
       title: 'Example',

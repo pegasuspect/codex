@@ -8,6 +8,7 @@ interface RankedArtworkCandidate extends ArtworkCandidate {
 }
 
 let lastArtworkUrl: string | null = null;
+let lastIsPlaying: boolean | null = null;
 let pendingTimer: number | null = null;
 
 const observer = new MutationObserver(() => {
@@ -22,6 +23,12 @@ observer.observe(document.documentElement, {
 
 scheduleEmit();
 window.setInterval(scheduleEmit, 5_000);
+window.addEventListener('pagehide', () => {
+  emitInactiveState();
+});
+window.addEventListener('beforeunload', () => {
+  emitInactiveState();
+});
 
 function scheduleEmit(): void {
   if (pendingTimer !== null) {
@@ -36,17 +43,39 @@ function scheduleEmit(): void {
 
 function emitCurrentArtwork(): void {
   const candidate = findArtworkCandidate();
+  const isPlaying = isSpotifyPlaying();
 
-  if (!candidate || candidate.artworkUrl === lastArtworkUrl) {
+  if (!candidate && !isPlaying) {
+    emitInactiveState();
     return;
   }
 
-  lastArtworkUrl = candidate.artworkUrl;
+  if (candidate?.artworkUrl === lastArtworkUrl && isPlaying === lastIsPlaying) {
+    return;
+  }
+
+  lastArtworkUrl = candidate?.artworkUrl ?? lastArtworkUrl;
+  lastIsPlaying = isPlaying;
   void browser.runtime.sendMessage({
-    artworkUrl: candidate.artworkUrl,
+    artworkUrl: candidate?.artworkUrl,
+    isPlaying,
     pageUrl: window.location.href,
     source: 'spotify-web',
-    title: candidate.title,
+    title: candidate?.title,
+  });
+}
+
+function emitInactiveState(): void {
+  if (lastIsPlaying === false) {
+    return;
+  }
+
+  lastIsPlaying = false;
+  void browser.runtime.sendMessage({
+    artworkUrl: lastArtworkUrl ?? undefined,
+    isPlaying: false,
+    pageUrl: window.location.href,
+    source: 'spotify-web',
   });
 }
 
@@ -135,6 +164,19 @@ function isVisible(image: HTMLImageElement): boolean {
     box.top < window.innerHeight &&
     box.left < window.innerWidth
   );
+}
+
+function isSpotifyPlaying(): boolean {
+  const playPauseButton = document.querySelector<HTMLElement>(
+    [
+      '[data-testid="control-button-playpause"]',
+      'button[aria-label="Pause"]',
+      'button[aria-label*="Pause"]',
+    ].join(','),
+  );
+  const label = playPauseButton?.getAttribute('aria-label') ?? '';
+
+  return label.toLowerCase().includes('pause');
 }
 
 function absolutize(url: string): string {

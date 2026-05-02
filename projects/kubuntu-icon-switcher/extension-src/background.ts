@@ -1,5 +1,6 @@
 interface ArtworkMessage {
-  artworkUrl: string;
+  artworkUrl?: string;
+  isPlaying: boolean;
   pageUrl: string;
   source: 'spotify-web';
   title?: string;
@@ -18,6 +19,7 @@ browser.runtime.onMessage.addListener((message: unknown) => {
   nativePort.postMessage({
     artworkUrl: message.artworkUrl,
     emittedAt: new Date().toISOString(),
+    isPlaying: message.isPlaying,
     pageUrl: message.pageUrl,
     source: message.source,
     title: message.title,
@@ -44,7 +46,8 @@ function isArtworkMessage(value: unknown): value is ArtworkMessage {
 
   const candidate = value as Partial<ArtworkMessage>;
   return (
-    typeof candidate.artworkUrl === 'string' &&
+    (candidate.artworkUrl === undefined || typeof candidate.artworkUrl === 'string') &&
+    typeof candidate.isPlaying === 'boolean' &&
     typeof candidate.pageUrl === 'string' &&
     candidate.source === 'spotify-web'
   );

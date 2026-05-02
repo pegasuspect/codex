@@ -2,8 +2,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 export interface FirefoxArtworkState {
-  artworkUrl: string;
+  artworkUrl?: string;
   emittedAt: string;
+  isPlaying: boolean;
   pageUrl: string;
   source: 'spotify-web';
   title?: string;
@@ -21,6 +22,13 @@ export async function readFirefoxArtworkState(path: string): Promise<FirefoxArtw
   const content = await readFile(path, 'utf8');
   const parsed: unknown = JSON.parse(content);
 
+  if (isLegacyFirefoxArtworkState(parsed)) {
+    return {
+      ...parsed,
+      isPlaying: true,
+    };
+  }
+
   if (!isFirefoxArtworkState(parsed)) {
     throw new Error(`Invalid Firefox artwork state file: ${path}`);
   }
@@ -36,7 +44,9 @@ export async function writeFirefoxArtworkState(
   await writeFile(path, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 }
 
-function isFirefoxArtworkState(value: unknown): value is FirefoxArtworkState {
+function isLegacyFirefoxArtworkState(
+  value: unknown,
+): value is Omit<FirefoxArtworkState, 'isPlaying'> {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -45,6 +55,22 @@ function isFirefoxArtworkState(value: unknown): value is FirefoxArtworkState {
   return (
     typeof candidate.artworkUrl === 'string' &&
     typeof candidate.emittedAt === 'string' &&
+    candidate.isPlaying === undefined &&
+    typeof candidate.pageUrl === 'string' &&
+    candidate.source === 'spotify-web'
+  );
+}
+
+function isFirefoxArtworkState(value: unknown): value is FirefoxArtworkState {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<FirefoxArtworkState>;
+  return (
+    (candidate.artworkUrl === undefined || typeof candidate.artworkUrl === 'string') &&
+    typeof candidate.emittedAt === 'string' &&
+    typeof candidate.isPlaying === 'boolean' &&
     typeof candidate.pageUrl === 'string' &&
     candidate.source === 'spotify-web'
   );

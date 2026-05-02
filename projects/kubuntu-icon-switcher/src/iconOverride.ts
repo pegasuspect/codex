@@ -23,6 +23,12 @@ export interface BuildIconOverridePlanInput {
   xdgDataHome?: string;
 }
 
+export interface BuildRestoreIconPlanInput {
+  desktopId?: string;
+  homeDirectory?: string;
+  xdgDataHome?: string;
+}
+
 export interface IconOverridePlan {
   rewriteDesktopEntry: (content: string) => string;
   sourceDesktopPath: string;
@@ -56,6 +62,24 @@ export async function buildIconOverridePlan(
     sourceIconPath: input.iconPath,
     targetDesktopPath,
     targetIconPath,
+  };
+}
+
+export async function buildRestoreIconPlan(
+  input: BuildRestoreIconPlanInput,
+): Promise<IconOverridePlan> {
+  const homeDirectory = requireHome(input.homeDirectory);
+  const xdgDataHome = input.xdgDataHome ?? join(homeDirectory, '.local', 'share');
+  const desktopId = input.desktopId ?? (await findFirefoxDesktopId(DEFAULT_FIREFOX_DESKTOP_IDS));
+  const sourceDesktopPath = join('/usr/share/applications', desktopId);
+  const targetDesktopPath = join(xdgDataHome, 'applications', desktopId);
+
+  return {
+    rewriteDesktopEntry: (content) => content,
+    sourceDesktopPath,
+    sourceIconPath: sourceDesktopPath,
+    targetDesktopPath,
+    targetIconPath: targetDesktopPath,
   };
 }
 

@@ -1,12 +1,21 @@
 #!/usr/bin/env node
 import { stdin } from 'node:process';
-import { firefoxArtworkStatePath, writeFirefoxArtworkState } from './firefoxArtworkState.js';
+import {
+  type FirefoxArtworkState,
+  firefoxArtworkStatePath,
+  writeFirefoxArtworkState,
+} from './firefoxArtworkState.js';
 
 let buffer = Buffer.alloc(0);
+let lastState: FirefoxArtworkState | null = null;
 
 stdin.on('data', (chunk: Buffer) => {
   buffer = Buffer.concat([buffer, chunk]);
   void drainMessages();
+});
+
+stdin.on('end', () => {
+  void writeInactiveState();
 });
 
 async function drainMessages(): Promise<void> {
@@ -31,16 +40,23 @@ async function handleMessage(messageBuffer: Buffer): Promise<void> {
     return;
   }
 
+  lastState = parsed;
   await writeFirefoxArtworkState(firefoxArtworkStatePath(process.env.HOME), parsed);
 }
 
-function isNativeArtworkMessage(value: unknown): value is {
-  artworkUrl: string;
-  emittedAt: string;
-  pageUrl: string;
-  source: 'spotify-web';
-  title?: string;
-} {
+async function writeInactiveState(): Promise<void> {
+  if (!lastState) {
+    return;
+  }
+
+  await writeFirefoxArtworkState(firefoxArtworkStatePath(process.env.HOME), {
+    ...lastState,
+    emittedAt: new Date().toISOString(),
+    isPlaying: false,
+  });
+}
+
+function isNativeArtworkMessage(value: unknown): value is FirefoxArtworkState {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -48,13 +64,15 @@ function isNativeArtworkMessage(value: unknown): value is {
   const candidate = value as {
     artworkUrl?: unknown;
     emittedAt?: unknown;
+    isPlaying?: unknown;
     pageUrl?: unknown;
     source?: unknown;
   };
 
   return (
-    typeof candidate.artworkUrl === 'string' &&
+    (candidate.artworkUrl === undefined || typeof candidate.artworkUrl === 'string') &&
     typeof candidate.emittedAt === 'string' &&
+    typeof candidate.isPlaying === 'boolean' &&
     typeof candidate.pageUrl === 'string' &&
     candidate.source === 'spotify-web'
   );

@@ -92,8 +92,8 @@ Architecture:
 
 1. The WebExtension in `extension/` runs on `https://open.spotify.com/*`.
 2. Its content script detects Spotify artwork image URLs.
-3. Its background script sends the latest artwork URL to the native messaging
-   host `codex_kubuntu_icon_switcher`.
+3. Its background script sends the latest artwork URL and playback state to the
+   native messaging host `codex_kubuntu_icon_switcher`.
 4. The native host writes the latest state file to
    `~/.cache/kubuntu-icon-switcher/firefox-artwork.json`.
 5. `watch-firefox` watches that state file, caches the artwork image, and
@@ -116,6 +116,11 @@ npm run watch-firefox
 
 Open Spotify Web Player in Firefox. When the extension emits new artwork, the
 watcher updates the Firefox launcher icon to the cached image.
+
+The watcher keeps the album-art icon only while Spotify Web Player reports that
+music is playing. It restores the original Firefox desktop entry when playback
+stops, when Firefox disconnects from the native host, or when the watcher exits
+from `SIGINT` or `SIGTERM`.
 
 ## Testing
 
