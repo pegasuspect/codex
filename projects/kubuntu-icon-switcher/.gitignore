@@ -2,4 +2,5 @@ coverage/
 dist/
 extension/dist/
 node_modules/
+release/*-source-review.zip
 release/*.xpi

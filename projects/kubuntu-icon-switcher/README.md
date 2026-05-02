@@ -121,6 +121,19 @@ The package command creates:
 release/kubuntu-icon-switcher-artwork-bridge.xpi
 ```
 
+For Mozilla source review, this shell alias creates a source archive without
+running npm:
+
+```bash
+alias zip-kubuntu-review='mkdir -p release && zip -r -9 release/kubuntu-icon-switcher-source-review.zip .prettierrc.json LICENSE.md README.md assets eslint.config.js extension extension-src package-lock.json package.json src test tsconfig.extension.json tsconfig.json -x "extension/dist/*" "dist/*" "node_modules/*" "release/*"'
+```
+
+Run it from this project directory:
+
+```bash
+zip-kubuntu-review
+```
+
 For local development, load `extension/manifest.json` in Firefox through
 `about:debugging` as a temporary add-on. For persistent install, install the XPI
 in a Firefox build/profile that accepts unsigned local extensions, or submit the
