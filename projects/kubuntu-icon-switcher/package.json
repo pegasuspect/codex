@@ -2,6 +2,7 @@
   "name": "kubuntu-icon-switcher",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "bin": {
     "kubuntu-icon-switcher": "./dist/src/cli.js"

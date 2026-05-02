@@ -13,6 +13,12 @@ playing in Spotify.
 
 Active scaffold.
 
+## License
+
+This project is proprietary and all rights are reserved. Review
+[LICENSE.md](./LICENSE.md) before copying, modifying, distributing, or submitting
+this software anywhere.
+
 ## Architecture
 
 The project is a TypeScript CLI. It uses user-local XDG paths so it can change
