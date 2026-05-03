@@ -44,6 +44,8 @@ export async function buildPhase1Plan(input: BuildPhase1PlanInput): Promise<Icon
 export async function buildIconOverridePlan(
   input: BuildIconOverridePlanInput,
 ): Promise<IconOverridePlan> {
+  requireLinuxIconReplacementSupport();
+
   const homeDirectory = requireHome(input.homeDirectory);
   const xdgDataHome = input.xdgDataHome ?? join(homeDirectory, '.local', 'share');
   const desktopId = input.desktopId ?? (await findFirefoxDesktopId(DEFAULT_FIREFOX_DESKTOP_IDS));
@@ -68,6 +70,8 @@ export async function buildIconOverridePlan(
 export async function buildRestoreIconPlan(
   input: BuildRestoreIconPlanInput,
 ): Promise<IconOverridePlan> {
+  requireLinuxIconReplacementSupport();
+
   const homeDirectory = requireHome(input.homeDirectory);
   const xdgDataHome = input.xdgDataHome ?? join(homeDirectory, '.local', 'share');
   const desktopId = input.desktopId ?? (await findFirefoxDesktopId(DEFAULT_FIREFOX_DESKTOP_IDS));
@@ -81,6 +85,28 @@ export async function buildRestoreIconPlan(
     targetDesktopPath,
     targetIconPath: targetDesktopPath,
   };
+}
+
+function requireLinuxIconReplacementSupport(): void {
+  if (process.platform === 'linux') {
+    return;
+  }
+
+  if (process.platform === 'darwin') {
+    throw new Error(
+      'Changing Firefox launcher icons is not supported on macOS. macOS does not use KDE .desktop launcher entries, so this tool cannot safely replace the Firefox Dock/app icon on that OS.',
+    );
+  }
+
+  if (process.platform === 'win32') {
+    throw new Error(
+      'Changing Firefox launcher icons is not supported on Windows. Windows does not use KDE .desktop launcher entries, so this tool cannot safely replace the Firefox taskbar/shortcut icon on that OS.',
+    );
+  }
+
+  throw new Error(
+    `Changing Firefox launcher icons is supported only on Linux/KDE. Current platform: ${process.platform}.`,
+  );
 }
 
 async function findFirefoxDesktopId(candidates: string[]): Promise<string> {

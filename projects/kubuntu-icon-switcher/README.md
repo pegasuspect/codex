@@ -25,6 +25,10 @@ The project is a TypeScript CLI. It uses user-local XDG paths so it can change
 launcher metadata without touching `/usr/share/applications` or system icon
 themes.
 
+Icon replacement is supported only on Linux/KDE. On macOS or Windows the CLI
+stops with an explicit OS limitation message because those systems do not use
+KDE `.desktop` launcher entries.
+
 Phase 1 flow:
 
 1. Find the system Firefox `.desktop` entry.
