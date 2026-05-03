@@ -5,10 +5,24 @@ service_name="kubuntu-icon-switcher.service"
 project_directory="${0:A:h}"
 service_directory="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 service_path="$service_directory/$service_name"
-npm_path="${NPM_PATH:-$(command -v npm)}"
+npm_path="${NPM_PATH:-}"
+node_path="${NODE_BIN:-}"
+
+if [[ -z "$npm_path" ]]; then
+  npm_path="$(command -v npm || true)"
+fi
+
+if [[ -z "$node_path" ]]; then
+  node_path="$(command -v node || true)"
+fi
 
 if [[ -z "$npm_path" ]]; then
   print -u2 "npm was not found on PATH."
+  exit 1
+fi
+
+if [[ -z "$node_path" ]]; then
+  print -u2 "node was not found on PATH."
   exit 1
 fi
 
@@ -23,24 +37,30 @@ print "Installing Firefox native messaging host..."
   "$npm_path" run install-firefox-host
 )
 
+runtime_path="$project_directory/dist/src/cli.js"
+
+if [[ ! -f "$runtime_path" ]]; then
+  print -u2 "Expected built watcher runtime was not found: $runtime_path"
+  exit 1
+fi
+
 print "Writing user systemd service to $service_path..."
 mkdir -p "$service_directory"
 
 cat > "$service_path" <<SERVICE
 [Unit]
 Description=Kubuntu Icon Switcher Firefox artwork watcher
-PartOf=graphical-session.target
-After=graphical-session.target
 
 [Service]
 Type=simple
 WorkingDirectory=$project_directory
-ExecStart=$npm_path run watch-firefox
+Environment=HOME=$HOME
+ExecStart=$node_path $runtime_path watch-firefox
 Restart=always
 RestartSec=3
 
 [Install]
-WantedBy=default.target graphical-session.target
+WantedBy=default.target
 SERVICE
 
 print "Reloading user systemd units..."

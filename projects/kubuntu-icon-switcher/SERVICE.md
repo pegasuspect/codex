@@ -24,7 +24,7 @@ The script is safe to run again. Each run:
 3. Reloads user systemd units.
 4. Enables the service for login autostart.
 5. Attempts to enable user lingering when `loginctl` permits it.
-6. Restarts the watcher service.
+6. Restarts the watcher service using the built Node runtime directly.
 7. Prints whether the service is enabled and active.
 
 It does not create duplicate services.
@@ -35,17 +35,17 @@ The script is user and checkout-location agnostic:
   directory.
 - It writes to `${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user`.
 - It detects `npm` from the current `PATH`.
-- If `npm` is not on `PATH`, run with `NPM_PATH`:
+- If `npm` or `node` are not on `PATH`, run with `NPM_PATH` or `NODE_BIN`:
 
 ```bash
-NPM_PATH=/absolute/path/to/npm ./install-service.zsh
+NPM_PATH=/absolute/path/to/npm NODE_BIN=/absolute/path/to/node ./install-service.zsh
 ```
 
 ## Create the Service
 
 The installer generates this service with absolute paths for the current user and
 checkout location. If writing it manually, replace `<project-directory>` and
-`<npm-path>` with absolute paths for your environment.
+`<node-path>` with absolute paths for your environment.
 
 Create the user systemd directory and service file:
 
@@ -59,18 +59,17 @@ Paste this service definition:
 ```ini
 [Unit]
 Description=Kubuntu Icon Switcher Firefox artwork watcher
-PartOf=graphical-session.target
-After=graphical-session.target
 
 [Service]
 Type=simple
 WorkingDirectory=<project-directory>
-ExecStart=<npm-path> run watch-firefox
+Environment=HOME=<home-directory>
+ExecStart=<node-path> <project-directory>/dist/src/cli.js watch-firefox
 Restart=always
 RestartSec=3
 
 [Install]
-WantedBy=default.target graphical-session.target
+WantedBy=default.target
 ```
 
 ## Enable and Start

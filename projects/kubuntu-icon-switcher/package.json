@@ -26,6 +26,7 @@
     "spotify-art": "npm run build && node dist/src/cli.js spotify-art",
     "install-firefox-host": "npm run build && node dist/src/cli.js install-firefox-host",
     "watch-firefox": "npm run build && node dist/src/cli.js watch-firefox",
+    "watch-firefox:runtime": "node dist/src/cli.js watch-firefox",
     "watch-firefox:dry-run": "npm run build && node dist/src/cli.js watch-firefox --dry-run"
   },
   "devDependencies": {
