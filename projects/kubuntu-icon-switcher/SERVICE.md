@@ -6,16 +6,6 @@ This is cleaner than trying to hook directly into Firefox startup.
 The watcher is cheap while idle and waits on the Firefox artwork state file, so
 running it at login as a user service is the better fit.
 
-## Prerequisite
-
-Before enabling the service, make sure the Firefox native messaging host is
-installed:
-
-```bash
-cd /home/pegasuspect/projects/codex/projects/kubuntu-icon-switcher
-npm run install-firefox-host
-```
-
 ## Install or Repair with Script
 
 The project includes an installer script that installs the native host, writes
@@ -33,12 +23,29 @@ The script is safe to run again. Each run:
    `~/.config/systemd/user/kubuntu-icon-switcher.service`.
 3. Reloads user systemd units.
 4. Enables the service for login autostart.
-5. Restarts the watcher service.
-6. Prints whether the service is enabled and active.
+5. Attempts to enable user lingering when `loginctl` permits it.
+6. Restarts the watcher service.
+7. Prints whether the service is enabled and active.
 
 It does not create duplicate services.
 
+The script is user and checkout-location agnostic:
+
+- It uses the directory containing `install-service.zsh` as the project
+  directory.
+- It writes to `${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user`.
+- It detects `npm` from the current `PATH`.
+- If `npm` is not on `PATH`, run with `NPM_PATH`:
+
+```bash
+NPM_PATH=/absolute/path/to/npm ./install-service.zsh
+```
+
 ## Create the Service
+
+The installer generates this service with absolute paths for the current user and
+checkout location. If writing it manually, replace `<project-directory>` and
+`<npm-path>` with absolute paths for your environment.
 
 Create the user systemd directory and service file:
 
@@ -52,17 +59,18 @@ Paste this service definition:
 ```ini
 [Unit]
 Description=Kubuntu Icon Switcher Firefox artwork watcher
+PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/pegasuspect/projects/codex/projects/kubuntu-icon-switcher
-ExecStart=/usr/bin/npm run watch-firefox
-Restart=on-failure
+WorkingDirectory=<project-directory>
+ExecStart=<npm-path> run watch-firefox
+Restart=always
 RestartSec=3
 
 [Install]
-WantedBy=default.target
+WantedBy=default.target graphical-session.target
 ```
 
 ## Enable and Start

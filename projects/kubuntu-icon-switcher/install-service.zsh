@@ -29,17 +29,18 @@ mkdir -p "$service_directory"
 cat > "$service_path" <<SERVICE
 [Unit]
 Description=Kubuntu Icon Switcher Firefox artwork watcher
+PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
 WorkingDirectory=$project_directory
 ExecStart=$npm_path run watch-firefox
-Restart=on-failure
+Restart=always
 RestartSec=3
 
 [Install]
-WantedBy=default.target
+WantedBy=default.target graphical-session.target
 SERVICE
 
 print "Reloading user systemd units..."
@@ -47,6 +48,13 @@ systemctl --user daemon-reload
 
 print "Enabling $service_name for login autostart..."
 systemctl --user enable "$service_name"
+
+if command -v loginctl >/dev/null 2>&1; then
+  if [[ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null || true)" != "yes" ]]; then
+    print "Attempting to enable user lingering for boot/session reliability..."
+    loginctl enable-linger "$USER" >/dev/null 2>&1 || print "Could not enable lingering without additional privileges; service will still start when your user session starts."
+  fi
+fi
 
 print "Restarting $service_name..."
 systemctl --user reset-failed "$service_name" >/dev/null 2>&1 || true
