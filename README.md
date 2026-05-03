@@ -58,3 +58,32 @@ npm audit
 All passed. `npm audit` found `0 vulnerabilities`. One note: local Node is
 `v18.19.1`, and one ESLint dependency warns it prefers newer Node, but the
 installed toolchain still runs successfully.
+
+## Firefox XPI Submission
+
+Build the Firefox extension package for a new version submission:
+
+```bash
+cd projects/kubuntu-icon-switcher
+npm run package:firefox
+```
+
+The XPI is written to:
+
+```text
+projects/kubuntu-icon-switcher/release/kubuntu-icon-switcher-artwork-bridge.xpi
+```
+
+If Mozilla asks for source code, create the source review archive from the
+project directory:
+
+```bash
+mkdir -p release
+zip -r -9 release/kubuntu-icon-switcher-source-review.zip \
+  .prettierrc.json LICENSE.md README.md assets eslint.config.js extension extension-src \
+  package-lock.json package.json src test tsconfig.extension.json tsconfig.json \
+  -x "extension/dist/*" "dist/*" "node_modules/*" "release/*"
+```
+
+Upload the `.xpi` as the new extension version package and the source review zip
+when Mozilla requests review source.
