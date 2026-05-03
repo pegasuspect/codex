@@ -86,6 +86,10 @@ systemctl --user restart kubuntu-icon-switcher.service
 journalctl --user -u kubuntu-icon-switcher.service -f
 ```
 
+The watcher logs icon updates when the Firefox artwork state changes. It also
+prints a heartbeat every five minutes so a quiet log stream still confirms that
+the process is listening.
+
 ## Stop
 
 ```bash

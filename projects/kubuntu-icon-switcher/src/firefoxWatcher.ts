@@ -1,5 +1,5 @@
 import { existsSync, watchFile } from 'node:fs';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { albumArtCacheDirectory, plannedAlbumArtPath, resolveAlbumArt } from './albumArt.js';
 import { firefoxArtworkStatePath, readFirefoxArtworkState } from './firefoxArtworkState.js';
@@ -89,8 +89,45 @@ export async function watchFirefoxArtwork(input: WatchFirefoxArtworkInput): Prom
       console.error(message);
     });
   });
+  installHeartbeat({
+    getLastAppliedArtworkUrl: () => lastAppliedArtworkUrl,
+    statePath,
+  });
   installRestoreOnExitHandlers(restoreOriginalIcon);
   console.log(`Watching Firefox artwork state: ${statePath}`);
+}
+
+function installHeartbeat(input: {
+  getLastAppliedArtworkUrl: () => string | null;
+  statePath: string;
+}): void {
+  const interval = setInterval(() => {
+    logHeartbeat(input).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Watcher heartbeat failed: ${message}`);
+    });
+  }, 300_000);
+
+  interval.unref();
+}
+
+async function logHeartbeat(input: {
+  getLastAppliedArtworkUrl: () => string | null;
+  statePath: string;
+}): Promise<void> {
+  const lastAppliedArtworkUrl = input.getLastAppliedArtworkUrl();
+
+  if (!existsSync(input.statePath)) {
+    console.log(`Watcher heartbeat: listening; state file does not exist yet: ${input.statePath}`);
+    return;
+  }
+
+  const stateFile = await stat(input.statePath);
+  console.log(
+    `Watcher heartbeat: listening; state mtime=${stateFile.mtime.toISOString()}; last artwork=${
+      lastAppliedArtworkUrl ?? 'none'
+    }`,
+  );
 }
 
 function installRestoreOnExitHandlers(restoreOriginalIcon: () => Promise<void>): void {

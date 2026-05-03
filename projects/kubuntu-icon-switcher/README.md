@@ -170,6 +170,9 @@ Check service logs:
 journalctl --user -u kubuntu-icon-switcher.service -f
 ```
 
+The watcher logs icon updates when artwork changes and prints a heartbeat every
+five minutes while it is listening.
+
 Stop the service:
 
 ```bash
