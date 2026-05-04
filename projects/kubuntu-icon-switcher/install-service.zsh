@@ -3,10 +3,26 @@ set -euo pipefail
 
 service_name="kubuntu-icon-switcher.service"
 project_directory="${0:A:h}"
-service_directory="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+service_directory="$config_home/systemd/user"
 service_path="$service_directory/$service_name"
+app_config_directory="$config_home/kubuntu-icon-switcher"
+environment_path="$app_config_directory/service.env"
 npm_path="${NPM_PATH:-}"
 node_path="${NODE_BIN:-}"
+user_id="$(id -u)"
+runtime_directory="${XDG_RUNTIME_DIR:-/run/user/$user_id}"
+session_bus_address="${DBUS_SESSION_BUS_ADDRESS:-unix:path=$runtime_directory/bus}"
+display_name="${DISPLAY:-:0}"
+default_xauthority_path="$HOME/.Xauthority"
+xauthority_path=""
+stable_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+
+if [[ -f "$default_xauthority_path" ]]; then
+  xauthority_path="$default_xauthority_path"
+elif [[ -n "${XAUTHORITY:-}" && "${XAUTHORITY:-}" != /tmp/* ]]; then
+  xauthority_path="$XAUTHORITY"
+fi
 
 if [[ -z "$npm_path" ]]; then
   npm_path="$(command -v npm || true)"
@@ -45,16 +61,52 @@ if [[ ! -f "$runtime_path" ]]; then
 fi
 
 print "Writing user systemd service to $service_path..."
-mkdir -p "$service_directory"
+mkdir -p "$service_directory" "$app_config_directory"
+
+print "Writing captured KDE session environment to $environment_path..."
+{
+  print "HOME=$HOME"
+  print "XDG_RUNTIME_DIR=$runtime_directory"
+  print "DBUS_SESSION_BUS_ADDRESS=$session_bus_address"
+  print "DISPLAY=$display_name"
+  print "PATH=$stable_path"
+
+  if [[ -n "$xauthority_path" ]]; then
+    print "XAUTHORITY=$xauthority_path"
+  fi
+
+  if [[ -n "${XDG_CURRENT_DESKTOP:-}" ]]; then
+    print "XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP"
+  fi
+
+  if [[ -n "${XDG_SESSION_DESKTOP:-}" ]]; then
+    print "XDG_SESSION_DESKTOP=$XDG_SESSION_DESKTOP"
+  fi
+
+  if [[ -n "${XDG_SESSION_TYPE:-}" ]]; then
+    print "XDG_SESSION_TYPE=$XDG_SESSION_TYPE"
+  fi
+
+  if [[ -n "${KDE_FULL_SESSION:-}" ]]; then
+    print "KDE_FULL_SESSION=$KDE_FULL_SESSION"
+  fi
+
+  if [[ -n "${KDE_SESSION_VERSION:-}" ]]; then
+    print "KDE_SESSION_VERSION=$KDE_SESSION_VERSION"
+  fi
+} > "$environment_path"
 
 cat > "$service_path" <<SERVICE
 [Unit]
 Description=Kubuntu Icon Switcher Firefox artwork watcher
+After=graphical-session.target
+Wants=graphical-session.target
 
 [Service]
 Type=simple
 WorkingDirectory=$project_directory
-Environment=HOME=$HOME
+EnvironmentFile=$environment_path
+ExecStartPre=/bin/sh -c 'for i in \$(seq 1 30); do test -S "$runtime_directory/bus" && exit 0; sleep 1; done; exit 1'
 ExecStart=$node_path $runtime_path watch-firefox
 Restart=always
 RestartSec=3
