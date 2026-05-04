@@ -4,7 +4,7 @@ Use a user-level systemd service to run the Firefox artwork watcher at login.
 This is cleaner than trying to hook directly into Firefox startup.
 
 The watcher is cheap while idle and waits on the Firefox artwork state file, so
-running it at login as a user service is the better fit.
+running it with the Plasma graphical session is the better fit.
 
 ## Install or Repair with Script
 
@@ -24,8 +24,9 @@ The script is safe to run again. Each run:
 3. Writes the current KDE session environment to
    `~/.config/kubuntu-icon-switcher/service.env`.
 4. Reloads user systemd units.
-5. Enables the service for login autostart.
-6. Attempts to enable user lingering when `loginctl` permits it.
+5. Removes any older `default.target` autostart links from previous installer
+   versions.
+6. Enables the service for Plasma `graphical-session.target` autostart.
 7. Restarts the watcher service using the built Node runtime directly.
 8. Prints whether the service is enabled and active.
 
@@ -36,7 +37,7 @@ The script is user and checkout-location agnostic:
 - It uses the directory containing `install-service.zsh` as the project
   directory.
 - It writes to `${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user`.
-- It writes session values such as `XDG_RUNTIME_DIR`,
+- It writes user/session values such as `USER`, `LOGNAME`, `XDG_RUNTIME_DIR`,
   `DBUS_SESSION_BUS_ADDRESS`, `DISPLAY`, and KDE desktop markers to
   `${XDG_CONFIG_HOME:-$HOME/.config}/kubuntu-icon-switcher/service.env`.
 - It avoids persisting temporary `/tmp` Xauthority files because those can be
@@ -67,7 +68,7 @@ Paste this service definition:
 [Unit]
 Description=Kubuntu Icon Switcher Firefox artwork watcher
 After=graphical-session.target
-Wants=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
 Type=simple
@@ -79,13 +80,14 @@ Restart=always
 RestartSec=3
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target
 ```
 
 ## Enable and Start
 
 ```bash
 systemctl --user daemon-reload
+systemctl --user disable kubuntu-icon-switcher.service
 systemctl --user enable kubuntu-icon-switcher.service
 systemctl --user restart kubuntu-icon-switcher.service
 ```
@@ -101,15 +103,18 @@ prints a heartbeat every five minutes so a quiet log stream still confirms that
 the process is listening.
 
 If the service is active after reboot but icon refreshes do not appear in KDE,
-run the installer once from a normal Plasma desktop session:
+the service probably started outside the interactive Plasma session. Run the
+installer once from a normal Plasma desktop session:
 
 ```bash
 ./install-service.zsh
 ```
 
-That refreshes the captured session environment used by the service. This
-matters when the user manager starts before Plasma has exported the DBus and
-display variables that `kbuildsycoca` needs.
+That moves this service onto `graphical-session.target` and refreshes the
+captured user and session environment. This matters because `kbuildsycoca`
+updates the visible KDE shell through the active desktop session; a boot-started
+lingering service can run as the correct UID but still miss the session context
+that your terminal has.
 
 ## Stop
 
@@ -126,6 +131,6 @@ systemctl --user disable kubuntu-icon-switcher.service
 ## Notes
 
 Tying the watcher to Firefox specifically is possible with a wrapper script, but
-it is brittle. A login-started user service is simpler and matches the watcher's
-behavior: it waits for the Firefox bridge state file and reacts when Spotify Web
-Player sends artwork updates.
+it is brittle. A graphical-session user service is simpler and matches the
+watcher's behavior: it waits for the Firefox bridge state file and reacts when
+Spotify Web Player sends artwork updates.

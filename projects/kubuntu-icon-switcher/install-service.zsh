@@ -11,6 +11,7 @@ environment_path="$app_config_directory/service.env"
 npm_path="${NPM_PATH:-}"
 node_path="${NODE_BIN:-}"
 user_id="$(id -u)"
+user_name="$(id -un)"
 runtime_directory="${XDG_RUNTIME_DIR:-/run/user/$user_id}"
 session_bus_address="${DBUS_SESSION_BUS_ADDRESS:-unix:path=$runtime_directory/bus}"
 display_name="${DISPLAY:-:0}"
@@ -66,6 +67,8 @@ mkdir -p "$service_directory" "$app_config_directory"
 print "Writing captured KDE session environment to $environment_path..."
 {
   print "HOME=$HOME"
+  print "USER=$user_name"
+  print "LOGNAME=$user_name"
   print "XDG_RUNTIME_DIR=$runtime_directory"
   print "DBUS_SESSION_BUS_ADDRESS=$session_bus_address"
   print "DISPLAY=$display_name"
@@ -100,7 +103,7 @@ cat > "$service_path" <<SERVICE
 [Unit]
 Description=Kubuntu Icon Switcher Firefox artwork watcher
 After=graphical-session.target
-Wants=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
 Type=simple
@@ -112,21 +115,17 @@ Restart=always
 RestartSec=3
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target
 SERVICE
 
 print "Reloading user systemd units..."
 systemctl --user daemon-reload
 
-print "Enabling $service_name for login autostart..."
-systemctl --user enable "$service_name"
+print "Removing any older default-target autostart links..."
+systemctl --user disable "$service_name" >/dev/null 2>&1 || true
 
-if command -v loginctl >/dev/null 2>&1; then
-  if [[ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null || true)" != "yes" ]]; then
-    print "Attempting to enable user lingering for boot/session reliability..."
-    loginctl enable-linger "$USER" >/dev/null 2>&1 || print "Could not enable lingering without additional privileges; service will still start when your user session starts."
-  fi
-fi
+print "Enabling $service_name for Plasma graphical-session autostart..."
+systemctl --user enable "$service_name"
 
 print "Restarting $service_name..."
 systemctl --user reset-failed "$service_name" >/dev/null 2>&1 || true

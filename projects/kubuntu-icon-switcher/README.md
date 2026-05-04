@@ -184,11 +184,10 @@ The installer is safe to run again. It installs the Firefox native messaging
 host, rewrites the single user service at
 `~/.config/systemd/user/kubuntu-icon-switcher.service`, writes the current KDE
 session environment to `~/.config/kubuntu-icon-switcher/service.env`, reloads
-user systemd units, enables login autostart, attempts to enable user lingering,
-restarts the watcher from the built Node runtime, and prints service status.
-Without lingering, the watcher starts when your user session starts after login.
-It does not create duplicate services. See [SERVICE.md](./SERVICE.md) for the
-full service definition.
+user systemd units, removes older `default.target` autostart links, enables
+Plasma `graphical-session.target` autostart, restarts the watcher from the built
+Node runtime, and prints service status. It does not create duplicate services.
+See [SERVICE.md](./SERVICE.md) for the full service definition.
 
 Check service logs:
 
@@ -201,9 +200,11 @@ five minutes while it is listening.
 
 If the service is running after reboot but KDE does not visibly refresh the
 Firefox launcher icon until you manually restart the unit, run
-`./install-service.zsh` once from a normal Plasma desktop session. The service
-uses the captured `XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS`, `DISPLAY`, and
-KDE session markers so `kbuildsycoca` can refresh the correct user session.
+`./install-service.zsh` once from a normal Plasma desktop session. The installer
+moves the service onto `graphical-session.target` and captures `USER`,
+`LOGNAME`, `XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS`, `DISPLAY`, and KDE
+session markers so `kbuildsycoca` can refresh the active desktop session rather
+than a boot-started lingering context.
 
 Stop the service:
 
