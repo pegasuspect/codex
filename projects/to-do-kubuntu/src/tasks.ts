@@ -1,5 +1,5 @@
 import type { Event, Outcome, Task, TaskState } from "./model";
-import { notifyDone, notifyStatus } from "./desktop";
+import { installStatusIcon, notifyDone, runStatusIcon, uninstallStatusIcon } from "./desktop";
 import { loadEvents, saveEvent } from "./store";
 
 const terminal = new Set<TaskState>(["done", "removed"]);
@@ -27,7 +27,7 @@ export const commands = [
   { name: "done", usage: "done <targets>", description: "finish tasks and notify on new completions" },
   { name: "drop", usage: "drop <targets>", description: "remove tasks from active work" },
   { name: "purge", usage: "purge <targets>", description: "delete task history projection" },
-  { name: "status-icon", usage: "status-icon", description: "notify the current incomplete count with an icon" },
+  { name: "status-icon", usage: "status-icon <run|install|uninstall>", description: "manage the tray count icon" },
   { name: "completion", usage: "completion zsh", description: "print shell completion script" },
 ] as const;
 
@@ -162,6 +162,9 @@ export const zshCompletion = () =>
     "    start|hold|done|drop|purge)",
     "      _message 'task id or title prefix'",
     "      ;;",
+    "    status-icon)",
+    "      _arguments '1:action:(run install uninstall)'",
+    "      ;;",
     "    completion)",
     "      _arguments '1:shell:(zsh)'",
     "      ;;",
@@ -179,6 +182,12 @@ export const runTaskCommand = (args: string[]): Outcome => {
     if (rest[0] === "zsh") return { code: 0, text: zshCompletion() };
     return { code: 2, text: "usage: todoctl completion zsh" };
   }
+  if (verb === "status-icon") {
+    if (rest[0] === "run") return runStatusIcon();
+    if (rest[0] === "install") return { code: 0, text: installStatusIcon() };
+    if (rest[0] === "uninstall") return { code: 0, text: uninstallStatusIcon() };
+    return { code: 2, text: "usage: todoctl status-icon <run|install|uninstall>" };
+  }
 
   const events = loadEvents();
   const tasks = fold(events);
@@ -186,7 +195,6 @@ export const runTaskCommand = (args: string[]): Outcome => {
   if (verb === "list" || verb === "ls") {
     return { code: 0, text: formatTasks(tasks, rest.includes("--all") || rest.includes("-a")) };
   }
-  if (verb === "status-icon") return { code: 0, text: notifyStatus(visible(tasks).length) };
   if (verb === "add") {
     const { title, tags } = parseAdd(rest);
     if (!title) return { code: 2, text: "usage: todoctl add <title> [--tag name]" };
@@ -220,12 +228,14 @@ export const runTaskCommand = (args: string[]): Outcome => {
   return { code: 0, text: `${verb} ${resolved.map((task) => task.id).join(", ")}` };
 };
 
+const helpWidth = Math.max("--help".length, ...commands.map((command) => command.usage.length)) + 2;
+
 export const help = [
   "todoctl <command>",
   "",
   "Commands:",
-  ...commands.map((command) => `  ${command.usage.padEnd(27)} ${command.description}`),
-  `  ${"--help".padEnd(27)} show this help`,
+  ...commands.map((command) => `  ${command.usage.padEnd(helpWidth)} ${command.description}`),
+  `  ${"--help".padEnd(helpWidth)} show this help`,
   "",
   "Targets can be numeric IDs or title prefixes. Numeric input only matches IDs.",
   "Install zsh completion with: todoctl completion zsh > ~/.local/share/zsh/site-functions/_todoctl",

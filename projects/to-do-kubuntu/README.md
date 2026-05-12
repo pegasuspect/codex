@@ -16,7 +16,8 @@ todoctl add "write service notes" --tag docs
 todoctl list
 todoctl start <target>
 todoctl done 1,2,write
-todoctl status-icon
+todoctl status-icon install
+todoctl status-icon run
 todoctl --help
 ```
 
@@ -48,9 +49,15 @@ numeric ID. Commas target more than one task for `start`, `hold`, `done`,
 `drop`, and `purge`.
 
 When a task newly transitions to `done`, `todoctl` sends a desktop notification
-through `notify-send`. `todoctl status-icon` generates a numbered SVG status
-icon in the user cache directory and sends a desktop notification that uses that
-icon with the current incomplete todo count.
+through `notify-send`.
+
+`todoctl status-icon run` starts a long-running KDE system tray icon with the
+current incomplete todo count drawn directly on the icon. It refreshes as the
+task log changes. Starting it again replaces the previous running tray icon so
+only one copy stays visible. It uses the first available Python Qt binding from
+`PyQt6`, `PySide6`, or `PyQt5`. `todoctl status-icon install` writes an
+autostart desktop entry so the tray icon starts on login, and
+`todoctl status-icon uninstall` removes that entry.
 
 Data is stored as append-only JSON lines at:
 

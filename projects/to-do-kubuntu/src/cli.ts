@@ -14,7 +14,7 @@ const main = () => {
   }
 
   const outcome = runTaskCommand(process.argv.slice(2));
-  write(outcome.text, outcome.code > 0);
+  if (outcome.text) write(outcome.text, outcome.code > 0);
   return outcome.code;
 };
 
