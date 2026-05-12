@@ -28,3 +28,10 @@ declare module "node:path" {
   export function dirname(path: string): string;
   export function join(...parts: string[]): string;
 }
+declare module "node:child_process" {
+  export function spawnSync(
+    command: string,
+    args?: string[],
+    options?: { stdio?: "ignore" },
+  ): { status: number | null; error?: unknown };
+}

@@ -1,9 +1,10 @@
 import type { Event, Outcome, Task, TaskState } from "./model";
+import { notifyDone, notifyStatus } from "./desktop";
 import { loadEvents, saveEvent } from "./store";
 
 const terminal = new Set<TaskState>(["done", "removed"]);
 const statesByEvent = {
-  "task.started": "installed",
+  "task.started": "started",
   "task.held": "held",
   "task.done": "done",
   "task.dropped": "removed",
@@ -79,6 +80,13 @@ const eventFor = (verb: string, id: string): Event | undefined => {
   return type ? { type, id, at: now() } : undefined;
 };
 
+const targetsFrom = (args: string[]) =>
+  args
+    .join(" ")
+    .split(",")
+    .map((target) => target.trim())
+    .filter(Boolean);
+
 const resolveTask = (tasks: Task[], query: string): Outcome | Task => {
   const byId = tasks.find((task) => task.id === query);
   if (byId) return byId;
@@ -116,10 +124,11 @@ export const runTaskCommand = (args: string[]): Outcome => {
   const events = loadEvents();
   const tasks = fold(events);
 
-  if (verb === "help") return { code: 0, text: help };
+  if (verb === "help" || verb === "--help" || verb === "-h") return { code: 0, text: help };
   if (verb === "list" || verb === "ls") {
     return { code: 0, text: formatTasks(tasks, rest.includes("--all") || rest.includes("-a")) };
   }
+  if (verb === "status-icon") return { code: 0, text: notifyStatus(visible(tasks).length) };
   if (verb === "add") {
     const { title, tags } = parseAdd(rest);
     if (!title) return { code: 2, text: "usage: todoctl add <title> [--tag name]" };
@@ -130,15 +139,27 @@ export const runTaskCommand = (args: string[]): Outcome => {
     return { code: 0, text: `added ${id}` };
   }
 
-  const task = rest[0] ? resolveTask(tasks, rest[0]) : undefined;
-  if (!task) return { code: 2, text: help };
-  if ("code" in task) return task;
+  const targets = targetsFrom(rest);
+  if (!targets.length) return { code: 2, text: help };
 
-  const event = eventFor(verb, task.id);
-  if (!event) return { code: 2, text: help };
+  const resolved: Task[] = [];
+  for (const target of targets) {
+    const task = resolveTask(tasks, target);
+    if ("code" in task) return task;
+    resolved.push(task);
+  }
 
-  saveEvent(event);
-  return { code: 0, text: `${verb} ${task.id}` };
+  const eventsToSave: Event[] = [];
+  for (const task of resolved) {
+    const event = eventFor(verb, task.id);
+    if (!event) return { code: 2, text: help };
+    eventsToSave.push(event);
+  }
+
+  for (const event of eventsToSave) saveEvent(event);
+  if (verb === "done") notifyDone(resolved.filter((task) => task.state !== "done"));
+
+  return { code: 0, text: `${verb} ${resolved.map((task) => task.id).join(", ")}` };
 };
 
 export const help = [
@@ -147,9 +168,14 @@ export const help = [
   "Commands:",
   "  add <title> [--tag name]  add a wanted task",
   "  list [--all]              list active tasks",
-  "  start <id>                mark task installed",
-  "  hold <id>                 hold task",
-  "  done <id>                 finish task",
-  "  drop <id>                 remove task from active work",
-  "  purge <id>                delete task history projection",
+  "  start <targets>           mark tasks started",
+  "  hold <targets>            hold tasks",
+  "  done <targets>            finish tasks and notify on new completions",
+  "  drop <targets>            remove tasks from active work",
+  "  purge <targets>           delete task history projection",
+  "  status-icon               notify the current incomplete count with an icon",
+  "  --help                    show this help",
+  "",
+  "Targets can be numeric IDs or title prefixes. Numeric input only matches IDs.",
+  "Use commas for multiple targets, for example: todoctl done 1,2,write",
 ].join("\n");

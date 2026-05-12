@@ -14,12 +14,20 @@ npm install
 npm run build
 todoctl add "write service notes" --tag docs
 todoctl list
-todoctl start <id>
-todoctl done <id>
+todoctl start <target>
+todoctl done 1,2,write
+todoctl status-icon
+todoctl --help
 ```
 
 Tasks use auto-incrementing numeric IDs. Commands can target the number or the
-case-insensitive beginning of the task title.
+case-insensitive beginning of the task title. Numeric input only matches a
+numeric ID. Commas target more than one task for `start`, `hold`, `done`,
+`drop`, and `purge`.
+
+When a task newly transitions to `done`, `todoctl` sends a desktop notification
+through `notify-send`. `todoctl status-icon` sends a desktop notification with
+an icon and the current incomplete todo count.
 
 Data is stored as append-only JSON lines at:
 
@@ -61,7 +69,7 @@ Kanban board, or plain checklist.
 
 ## Iteration 2 - Apt Errand Ledger
 
-Tasks are modeled like local package operations: wanted, installed, held,
+Tasks are modeled like local package operations: wanted, started, held,
 removed, and purged.
 
 ### Pseudocode
@@ -71,9 +79,9 @@ read tasks
 map status to package-like state
 print apt-style table
 when user starts a task:
-  move wanted to installed
+  move wanted to started
 when user abandons a task:
-  move installed to removed
+  move started to removed
 when user deletes a task:
   purge it from storage
 ```
@@ -244,7 +252,7 @@ This abandons notification pressure for archive movement.
 
 ### Why It Is Unique
 
-It treats deferred work like installed resources that can be packed and unpacked
+It treats deferred work like local resources that can be packed and unpacked
 without pretending everything belongs in today's list.
 
 ## Iteration 9 - Journalctl Promise Stream
@@ -310,6 +318,6 @@ fully: it is unique without being decorative, Kubuntu-native without becoming a
 fragile Plasma plugin, and Unix-like enough to feel as if it belongs beside
 `apt`, `journalctl`, and `systemctl --user`. The Kubuntu check is part of
 startup rather than documentation, which makes the environment contract real.
-The event log is simple, inspectable, and durable. The package verbs make tasks
-feel installed, held, removed, or purged from a user's working system, which
-embeds the idea in Kubuntu's Debian foundation.
+The event log is simple, inspectable, and durable. The package-like verbs make
+tasks feel started, held, removed, or purged from a user's working system,
+which embeds the idea in Kubuntu's Debian foundation.

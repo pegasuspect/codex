@@ -1,4 +1,4 @@
-export type TaskState = "wanted" | "installed" | "held" | "done" | "removed";
+export type TaskState = "wanted" | "started" | "held" | "done" | "removed";
 
 export type Task = {
   id: string;
