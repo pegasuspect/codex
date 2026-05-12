@@ -26,8 +26,9 @@ numeric ID. Commas target more than one task for `start`, `hold`, `done`,
 `drop`, and `purge`.
 
 When a task newly transitions to `done`, `todoctl` sends a desktop notification
-through `notify-send`. `todoctl status-icon` sends a desktop notification with
-an icon and the current incomplete todo count.
+through `notify-send`. `todoctl status-icon` generates a numbered SVG status
+icon in the user cache directory and sends a desktop notification that uses that
+icon with the current incomplete todo count.
 
 Data is stored as append-only JSON lines at:
 
