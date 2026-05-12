@@ -3,6 +3,35 @@
 A Kubuntu-native task program explored through ten deliberately different
 iterations before implementation.
 
+## Implemented Program
+
+`todoctl` is a TypeScript Node program for Kubuntu. It refuses to run when
+`/etc/os-release` and the desktop session do not look like Kubuntu with KDE
+Plasma.
+
+```text
+npm install
+npm run build
+todoctl add "write service notes" --tag docs
+todoctl list
+todoctl start <id>
+todoctl done <id>
+todoctl ui
+```
+
+The CLI and terminal UI both call the same command engine. Data is stored as
+append-only JSON lines at:
+
+```text
+$XDG_DATA_HOME/to-do-kubuntu/events.jsonl
+```
+
+or, when `XDG_DATA_HOME` is not set:
+
+```text
+~/.local/share/to-do-kubuntu/events.jsonl
+```
+
 ## Iteration 1 - Plasma Pinboard
 
 Tasks are not rows. They are small "plasmoids" grouped by the KDE surface they

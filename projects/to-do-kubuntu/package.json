@@ -1,0 +1,18 @@
+{
+  "name": "to-do-kubuntu",
+  "version": "0.1.0",
+  "description": "A Kubuntu-gated Unix-style todoctl with matching CLI and terminal UI.",
+  "bin": {
+    "todoctl": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5"
+  },
+  "license": "MIT"
+}
