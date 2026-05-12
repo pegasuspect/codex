@@ -83,3 +83,29 @@ This discards package states and turns work into navigable file-manager space.
 
 It makes task organization feel like Dolphin traversal, where location is the
 main interaction primitive.
+
+## Iteration 4 - KRunner Sparks
+
+Tasks are tiny commands that can be searched, previewed, and fired like KRunner
+matches.
+
+### Pseudocode
+
+```text
+read tasks
+index title, tags, command, and note
+wait for query
+rank fuzzy matches
+show best action for each match
+when user accepts a match:
+  run the task action
+  update task state
+```
+
+### Summary
+
+This replaces path navigation with fast command discovery.
+
+### Why It Is Unique
+
+The app is less a list and more a local command palette for obligations.
