@@ -243,3 +243,49 @@ This changes archives into a log-native design with derived state.
 
 The current list is never the source of truth; the promise stream is. That
 makes it feel like a small user-space Unix service.
+
+## Iteration 10 - Todoctl for Kubuntu
+
+The final design is `todoctl`: a Kubuntu-gated Unix-style task utility with two
+faces. The CLI and terminal UI call the same command table. Tasks are stored as
+append-only JSON events under the user's config directory. User verbs are
+package-like: add, list, done, hold, drop, purge, and ui.
+
+### Pseudocode
+
+```text
+start program
+detect Kubuntu from /etc/os-release and KDE session variables
+if not Kubuntu:
+  print error and exit 1
+
+load event log from XDG data path
+fold events into current tasks
+parse mode:
+  if cli:
+    run command handler
+  if ui:
+    open terminal screen
+    send every key action through same command handler
+write new event when state changes
+print or render the same task projection
+```
+
+### Summary
+
+This final iteration keeps the Unix-service flavor of iteration 9, borrows the
+clear verbs from iteration 2, and uses the terminal-first discipline of
+iteration 5. It leaves behind the designs that need heavier graphics, search
+indexes, timers, or desktop widgets.
+
+### Why It Is Unique
+
+I will start implementing this because it answers the original request most
+fully: it is unique without being decorative, Kubuntu-native without becoming a
+fragile Plasma plugin, and Unix-like enough to feel as if it belongs beside
+`apt`, `journalctl`, and `systemctl --user`. The same task engine powers both
+interfaces, so the CLI and UI have matching functionality. The Kubuntu check is
+part of startup rather than documentation, which makes the environment contract
+real. The event log is simple, inspectable, and durable. The package verbs make
+tasks feel installed, held, removed, or purged from a user's working system,
+which embeds the idea in Kubuntu's Debian foundation.
