@@ -1,7 +1,7 @@
 {
   "name": "to-do-kubuntu",
   "version": "0.1.0",
-  "description": "A Kubuntu-gated Unix-style todoctl with matching CLI and terminal UI.",
+  "description": "A Kubuntu-gated Unix-style todoctl CLI.",
   "bin": {
     "todoctl": "dist/cli.js"
   },

@@ -5,7 +5,7 @@ iterations before implementation.
 
 ## Implemented Program
 
-`todoctl` is a TypeScript Node program for Kubuntu. It refuses to run when
+`todoctl` is a TypeScript Node CLI for Kubuntu. It refuses to run when
 `/etc/os-release` and the desktop session do not look like Kubuntu with KDE
 Plasma.
 
@@ -16,11 +16,12 @@ todoctl add "write service notes" --tag docs
 todoctl list
 todoctl start <id>
 todoctl done <id>
-todoctl ui
 ```
 
-The CLI and terminal UI both call the same command engine. Data is stored as
-append-only JSON lines at:
+Tasks use auto-incrementing numeric IDs. Commands can target the number or the
+case-insensitive beginning of the task title.
+
+Data is stored as append-only JSON lines at:
 
 ```text
 $XDG_DATA_HOME/to-do-kubuntu/events.jsonl
@@ -275,10 +276,9 @@ makes it feel like a small user-space Unix service.
 
 ## Iteration 10 - Todoctl for Kubuntu
 
-The final design is `todoctl`: a Kubuntu-gated Unix-style task utility with two
-faces. The CLI and terminal UI call the same command table. Tasks are stored as
-append-only JSON events under the user's config directory. User verbs are
-package-like: add, list, done, hold, drop, purge, and ui.
+The final design is `todoctl`: a Kubuntu-gated Unix-style task utility. Tasks
+are stored as append-only JSON events under the user's config directory. User
+verbs are package-like: add, list, done, hold, drop, and purge.
 
 ### Pseudocode
 
@@ -291,13 +291,9 @@ if not Kubuntu:
 load event log from XDG data path
 fold events into current tasks
 parse mode:
-  if cli:
-    run command handler
-  if ui:
-    open terminal screen
-    send every key action through same command handler
+  run command handler
 write new event when state changes
-print or render the same task projection
+print the task projection
 ```
 
 ### Summary
@@ -312,9 +308,8 @@ indexes, timers, or desktop widgets.
 I will start implementing this because it answers the original request most
 fully: it is unique without being decorative, Kubuntu-native without becoming a
 fragile Plasma plugin, and Unix-like enough to feel as if it belongs beside
-`apt`, `journalctl`, and `systemctl --user`. The same task engine powers both
-interfaces, so the CLI and UI have matching functionality. The Kubuntu check is
-part of startup rather than documentation, which makes the environment contract
-real. The event log is simple, inspectable, and durable. The package verbs make
-tasks feel installed, held, removed, or purged from a user's working system,
-which embeds the idea in Kubuntu's Debian foundation.
+`apt`, `journalctl`, and `systemctl --user`. The Kubuntu check is part of
+startup rather than documentation, which makes the environment contract real.
+The event log is simple, inspectable, and durable. The package verbs make tasks
+feel installed, held, removed, or purged from a user's working system, which
+embeds the idea in Kubuntu's Debian foundation.

@@ -1,5 +1,4 @@
 import type { Event, Outcome, Task, TaskState } from "./model";
-import { createHash } from "node:crypto";
 import { loadEvents, saveEvent } from "./store";
 
 const terminal = new Set<TaskState>(["done", "removed"]);
@@ -19,8 +18,16 @@ const eventsByVerb = {
 } as const;
 
 const now = () => new Date().toISOString();
-const shortId = (title: string, at = now()) =>
-  createHash("sha1").update(`${at}:${title}`).digest("hex").slice(0, 8);
+const nextId = (events: Event[]) =>
+  String(
+    Math.max(
+      0,
+      ...events
+        .filter((event) => event.type === "task.added")
+        .map((event) => Number(event.id))
+        .filter(Number.isInteger),
+    ) + 1,
+  );
 
 export const fold = (events: Event[]): Task[] => {
   const tasks = new Map<string, Task>();
@@ -72,6 +79,19 @@ const eventFor = (verb: string, id: string): Event | undefined => {
   return type ? { type, id, at: now() } : undefined;
 };
 
+const resolveTask = (tasks: Task[], query: string): Outcome | Task => {
+  const wanted = query.toLowerCase();
+  const matches = tasks.filter(
+    (task) => task.id === query || task.title.toLowerCase().startsWith(wanted),
+  );
+
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    return { code: 1, text: `todoctl: "${query}" matches ${matches.map((task) => task.id).join(", ")}` };
+  }
+  return { code: 1, text: `todoctl: no task named ${query}` };
+};
+
 const parseAdd = (args: string[]) => {
   const tags: string[] = [];
   const title: string[] = [];
@@ -91,7 +111,8 @@ const parseAdd = (args: string[]) => {
 
 export const runTaskCommand = (args: string[]): Outcome => {
   const [verb = "help", ...rest] = args;
-  const tasks = fold(loadEvents());
+  const events = loadEvents();
+  const tasks = fold(events);
 
   if (verb === "help") return { code: 0, text: help };
   if (verb === "list" || verb === "ls") {
@@ -102,18 +123,20 @@ export const runTaskCommand = (args: string[]): Outcome => {
     if (!title) return { code: 2, text: "usage: todoctl add <title> [--tag name]" };
 
     const at = now();
-    const id = shortId(title, at);
+    const id = nextId(events);
     saveEvent({ type: "task.added", id, title, tags, at });
     return { code: 0, text: `added ${id}` };
   }
 
-  const id = rest[0];
-  const event = id ? eventFor(verb, id) : undefined;
+  const task = rest[0] ? resolveTask(tasks, rest[0]) : undefined;
+  if (!task) return { code: 2, text: help };
+  if ("code" in task) return task;
+
+  const event = eventFor(verb, task.id);
   if (!event) return { code: 2, text: help };
-  if (!tasks.some((task) => task.id === id)) return { code: 1, text: `todoctl: no task named ${id}` };
 
   saveEvent(event);
-  return { code: 0, text: `${verb} ${id}` };
+  return { code: 0, text: `${verb} ${task.id}` };
 };
 
 export const help = [
@@ -127,5 +150,4 @@ export const help = [
   "  done <id>                 finish task",
   "  drop <id>                 remove task from active work",
   "  purge <id>                delete task history projection",
-  "  ui                        open terminal UI",
 ].join("\n");
