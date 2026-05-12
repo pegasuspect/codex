@@ -56,3 +56,30 @@ This replaces desktop geography with Debian package lifecycle language.
 
 It borrows Kubuntu's underlying system vocabulary, so the list feels like a
 personal `apt` database rather than a productivity app.
+
+## Iteration 3 - Dolphin Breadcrumb Queue
+
+Every task has a path, such as `home/life/taxes/scan-receipts`; focus moves by
+folder-like breadcrumbs.
+
+### Pseudocode
+
+```text
+read tasks
+split each task path by slash
+build breadcrumb tree
+show sibling tasks near the selected path
+when user enters a segment:
+  narrow view to that branch
+when user completes branch:
+  bubble progress upward
+```
+
+### Summary
+
+This discards package states and turns work into navigable file-manager space.
+
+### Why It Is Unique
+
+It makes task organization feel like Dolphin traversal, where location is the
+main interaction primitive.
