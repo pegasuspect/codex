@@ -80,10 +80,12 @@ const eventFor = (verb: string, id: string): Event | undefined => {
 };
 
 const resolveTask = (tasks: Task[], query: string): Outcome | Task => {
+  const byId = tasks.find((task) => task.id === query);
+  if (byId) return byId;
+  if (/^\d+$/.test(query)) return { code: 1, text: `todoctl: no task numbered ${query}` };
+
   const wanted = query.toLowerCase();
-  const matches = tasks.filter(
-    (task) => task.id === query || task.title.toLowerCase().startsWith(wanted),
-  );
+  const matches = tasks.filter((task) => task.title.toLowerCase().startsWith(wanted));
 
   if (matches.length === 1) return matches[0];
   if (matches.length > 1) {
