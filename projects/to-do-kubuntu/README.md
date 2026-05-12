@@ -109,3 +109,30 @@ This replaces path navigation with fast command discovery.
 ### Why It Is Unique
 
 The app is less a list and more a local command palette for obligations.
+
+## Iteration 5 - Konsole Scrollback Oath
+
+Tasks are treated like shell history lines with an oath: anything entered must
+either be replayed, commented out, or resolved.
+
+### Pseudocode
+
+```text
+read task log in append order
+render each task as a command line
+when user adds a task:
+  append a new command
+when user completes it:
+  append a resolved comment
+when user views history:
+  replay the log into current state
+```
+
+### Summary
+
+This moves from searchable actions to an append-only terminal history model.
+
+### Why It Is Unique
+
+The task database becomes an auditable shell scrollback instead of mutable app
+state.
