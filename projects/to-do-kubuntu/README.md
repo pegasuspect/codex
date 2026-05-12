@@ -216,3 +216,30 @@ This abandons notification pressure for archive movement.
 
 It treats deferred work like installed resources that can be packed and unpacked
 without pretending everything belongs in today's list.
+
+## Iteration 9 - Journalctl Promise Stream
+
+Every task is an event. The app reads the event stream and prints current
+truth, much like `journalctl` reads logs and filters units.
+
+### Pseudocode
+
+```text
+read event lines
+fold events into task records
+when user adds a task:
+  append task.created event
+when user completes a task:
+  append task.done event
+when user filters:
+  print matching folded records
+```
+
+### Summary
+
+This changes archives into a log-native design with derived state.
+
+### Why It Is Unique
+
+The current list is never the source of truth; the promise stream is. That
+makes it feel like a small user-space Unix service.
