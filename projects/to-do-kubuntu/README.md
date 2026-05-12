@@ -163,3 +163,29 @@ This trades terminal history for a control-center model.
 
 It treats personal work as a configurable operating environment, not a stream
 of commands or files.
+
+## Iteration 7 - Notification Shade Treaty
+
+Tasks expire into quiet, normal, or urgent lanes, mirroring desktop notification
+pressure without using alarms as the main feature.
+
+### Pseudocode
+
+```text
+read tasks
+compare task age with chosen pressure
+sort quiet below normal below urgent
+when task is ignored:
+  raise pressure one level
+when task is completed:
+  clear pressure history
+```
+
+### Summary
+
+This drops module organization and focuses on attention pressure.
+
+### Why It Is Unique
+
+It uses the emotional rhythm of KDE notifications, but turns that rhythm into
+task ordering instead of popups.
