@@ -136,3 +136,30 @@ This moves from searchable actions to an append-only terminal history model.
 
 The task database becomes an auditable shell scrollback instead of mutable app
 state.
+
+## Iteration 6 - System Settings Matrix
+
+Tasks are arranged like settings modules: appearance, network, hardware,
+accounts, updates, and behavior.
+
+### Pseudocode
+
+```text
+read tasks
+load module names
+assign each task to one module
+show module health from open counts
+when user opens a module:
+  list its unresolved settings
+when user toggles a task:
+  recalculate module health
+```
+
+### Summary
+
+This trades terminal history for a control-center model.
+
+### Why It Is Unique
+
+It treats personal work as a configurable operating environment, not a stream
+of commands or files.
