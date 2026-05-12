@@ -189,3 +189,30 @@ This drops module organization and focuses on attention pressure.
 
 It uses the emotional rhythm of KDE notifications, but turns that rhythm into
 task ordering instead of popups.
+
+## Iteration 8 - Muon Archive Garden
+
+Tasks are bundled into named archives that can be unpacked for a day and packed
+away again when inactive.
+
+### Pseudocode
+
+```text
+read archives
+read active task bundle
+when user unpacks archive:
+  merge archive tasks into active view
+when user packs archive:
+  move inactive tasks back into archive
+when user lists tasks:
+  show active bundle then packed bundles
+```
+
+### Summary
+
+This abandons notification pressure for archive movement.
+
+### Why It Is Unique
+
+It treats deferred work like installed resources that can be packed and unpacked
+without pretending everything belongs in today's list.
