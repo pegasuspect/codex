@@ -3,7 +3,10 @@ declare const process: {
   execPath: string;
   env: Record<string, string | undefined>;
   exitCode?: number;
+  pid: number;
   exit(code?: number): never;
+  getuid?: () => number;
+  kill(pid: number, signal?: 0 | "SIGINT" | "SIGTERM"): boolean;
   on(event: "SIGINT" | "SIGTERM", listener: () => void): void;
   stdout: {
     write(text: string): void;

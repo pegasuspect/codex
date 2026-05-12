@@ -54,10 +54,10 @@ through `notify-send`.
 `todoctl status-icon run` starts a long-running KDE system tray icon with the
 current incomplete todo count drawn directly on the icon. It refreshes as the
 task log changes. Starting it again replaces the previous running tray icon so
-only one copy stays visible. It uses the first available Python Qt binding from
-`PyQt6`, `PySide6`, or `PyQt5`. `todoctl status-icon install` writes an
-autostart desktop entry so the tray icon starts on login, and
-`todoctl status-icon uninstall` removes that entry.
+only one copy stays visible. It registers a KDE StatusNotifierItem over the user
+D-Bus session. `todoctl status-icon install` writes an autostart desktop entry
+so the tray icon starts on login, and `todoctl status-icon uninstall` removes
+that entry.
 
 Data is stored as append-only JSON lines at:
 
