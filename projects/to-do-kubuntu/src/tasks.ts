@@ -18,6 +18,19 @@ const eventsByVerb = {
   purge: "task.purged",
 } as const;
 
+export const commands = [
+  { name: "add", usage: "add <title> [--tag name]", description: "add a wanted task" },
+  { name: "list", usage: "list [--all]", description: "list active tasks" },
+  { name: "ls", usage: "ls [--all]", description: "alias for list" },
+  { name: "start", usage: "start <targets>", description: "mark tasks started" },
+  { name: "hold", usage: "hold <targets>", description: "hold tasks" },
+  { name: "done", usage: "done <targets>", description: "finish tasks and notify on new completions" },
+  { name: "drop", usage: "drop <targets>", description: "remove tasks from active work" },
+  { name: "purge", usage: "purge <targets>", description: "delete task history projection" },
+  { name: "status-icon", usage: "status-icon", description: "notify the current incomplete count with an icon" },
+  { name: "completion", usage: "completion zsh", description: "print shell completion script" },
+] as const;
+
 const now = () => new Date().toISOString();
 const nextId = (events: Event[]) =>
   String(
@@ -119,12 +132,57 @@ const parseAdd = (args: string[]) => {
   return { title: title.join(" ").trim(), tags };
 };
 
+const zshQuote = (value: string) => value.replaceAll("\\", "\\\\").replaceAll("'", "'\\''");
+
+export const zshCompletion = () =>
+  [
+    "#compdef todoctl",
+    "",
+    "_todoctl() {",
+    "  local -a commands",
+    "  commands=(",
+    ...commands.map((command) => `    '${zshQuote(command.name)}:${zshQuote(command.description)}'`),
+    "  )",
+    "",
+    "  if (( CURRENT == 2 )); then",
+    "    _describe -t commands 'todoctl command' commands",
+    "    return",
+    "  fi",
+    "",
+    "  case ${words[2]} in",
+    "    add)",
+    "      _arguments \\",
+    "        '(-t --tag)'{-t,--tag}'[add a tag]:tag:' \\",
+    "        '*:task title:'",
+    "      ;;",
+    "    list|ls)",
+    "      _arguments \\",
+    "        '(-a --all)'{-a,--all}'[show completed and removed tasks]'",
+    "      ;;",
+    "    start|hold|done|drop|purge)",
+    "      _message 'task id or title prefix'",
+    "      ;;",
+    "    completion)",
+    "      _arguments '1:shell:(zsh)'",
+    "      ;;",
+    "  esac",
+    "}",
+    "",
+    "_todoctl \"$@\"",
+  ].join("\n");
+
 export const runTaskCommand = (args: string[]): Outcome => {
   const [verb = "help", ...rest] = args;
+
+  if (verb === "help" || verb === "--help" || verb === "-h") return { code: 0, text: help };
+  if (verb === "completion") {
+    if (rest[0] === "zsh") return { code: 0, text: zshCompletion() };
+    return { code: 2, text: "usage: todoctl completion zsh" };
+  }
+
   const events = loadEvents();
   const tasks = fold(events);
 
-  if (verb === "help" || verb === "--help" || verb === "-h") return { code: 0, text: help };
   if (verb === "list" || verb === "ls") {
     return { code: 0, text: formatTasks(tasks, rest.includes("--all") || rest.includes("-a")) };
   }
@@ -166,16 +224,10 @@ export const help = [
   "todoctl <command>",
   "",
   "Commands:",
-  "  add <title> [--tag name]  add a wanted task",
-  "  list [--all]              list active tasks",
-  "  start <targets>           mark tasks started",
-  "  hold <targets>            hold tasks",
-  "  done <targets>            finish tasks and notify on new completions",
-  "  drop <targets>            remove tasks from active work",
-  "  purge <targets>           delete task history projection",
-  "  status-icon               notify the current incomplete count with an icon",
-  "  --help                    show this help",
+  ...commands.map((command) => `  ${command.usage.padEnd(27)} ${command.description}`),
+  `  ${"--help".padEnd(27)} show this help`,
   "",
   "Targets can be numeric IDs or title prefixes. Numeric input only matches IDs.",
+  "Install zsh completion with: todoctl completion zsh > ~/.local/share/zsh/site-functions/_todoctl",
   "Use commas for multiple targets, for example: todoctl done 1,2,write",
 ].join("\n");

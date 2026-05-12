@@ -20,6 +20,28 @@ todoctl status-icon
 todoctl --help
 ```
 
+Install zsh completion with:
+
+```text
+npm install
+npm run build
+npm link
+mkdir -p ~/.local/share/zsh/site-functions
+todoctl completion zsh > ~/.local/share/zsh/site-functions/_todoctl
+```
+
+Make sure `~/.local/share/zsh/site-functions` is in your zsh `fpath`, then
+start a new shell or run `compinit` again. After that, pressing tab after
+`todoctl` shows the available commands with descriptions.
+
+If `todoctl` is an alias instead of a command installed on `PATH`, add an
+explicit completion binding after the completion file is installed:
+
+```text
+autoload -Uz _todoctl
+compdef _todoctl todoctl
+```
+
 Tasks use auto-incrementing numeric IDs. Commands can target the number or the
 case-insensitive beginning of the task title. Numeric input only matches a
 numeric ID. Commas target more than one task for `start`, `hold`, `done`,
