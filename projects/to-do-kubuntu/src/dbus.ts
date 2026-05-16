@@ -159,15 +159,81 @@ const writeValue = (writer: Writer, signature: string, value: unknown) => {
     writer.uint32(buffer.length);
     writer.pad(4);
     writer.write(buffer);
+  } else if (signature === "ai") {
+    const array = value as number[];
+    const body = new Writer();
+    for (const item of array) body.int32(item);
+    const buffer = body.buffer();
+    writer.pad(4);
+    writer.uint32(buffer.length);
+    writer.pad(4);
+    writer.write(buffer);
+  } else if (signature === "ay") {
+    const bytes = Buffer.from(value as Uint8Array);
+    writer.pad(4);
+    writer.uint32(bytes.length);
+    writer.write(bytes);
+  } else if (signature === "a(iiay)") {
+    const pixmaps = value as [number, number, Uint8Array][];
+    const body = new Writer();
+    for (const [width, height, bytes] of pixmaps) {
+      body.pad(8);
+      body.int32(width);
+      body.int32(height);
+      writeValue(body, "ay", bytes);
+    }
+    const buffer = body.buffer();
+    writer.pad(4);
+    writer.uint32(buffer.length);
+    writer.pad(8);
+    writer.write(buffer);
+  } else if (signature === "a{sv}") {
+    const entries = value as Record<string, [string, unknown]>;
+    const body = new Writer();
+    for (const [key, variant] of Object.entries(entries)) {
+      body.pad(8);
+      body.string(key);
+      writeValue(body, "v", variant);
+    }
+    const buffer = body.buffer();
+    writer.pad(4);
+    writer.uint32(buffer.length);
+    writer.pad(8);
+    writer.write(buffer);
+  } else if (signature === "av") {
+    const variants = value as [string, unknown][];
+    const body = new Writer();
+    for (const variant of variants) writeValue(body, "v", variant);
+    const buffer = body.buffer();
+    writer.pad(4);
+    writer.uint32(buffer.length);
+    writer.write(buffer);
+  } else if (signature === "(ia{sv}av)") {
+    const [id, properties, children] = value as [number, Record<string, [string, unknown]>, [string, unknown][]];
+    writer.pad(8);
+    writer.int32(id);
+    writeValue(writer, "a{sv}", properties);
+    writeValue(writer, "av", children);
+  } else if (signature === "a(ia{sv})") {
+    const entries = value as [number, Record<string, [string, unknown]>][];
+    const body = new Writer();
+    for (const [id, properties] of entries) {
+      body.pad(8);
+      body.int32(id);
+      writeValue(body, "a{sv}", properties);
+    }
+    const buffer = body.buffer();
+    writer.pad(4);
+    writer.uint32(buffer.length);
+    writer.pad(8);
+    writer.write(buffer);
   } else if (signature === "(sa(iiay)ss)") {
     const [icon, pixmaps, title, text] = value as [string, unknown[], string, string];
     writer.pad(8);
     writer.string(icon);
-    writer.pad(4);
-    writer.uint32(0);
+    writeValue(writer, "a(iiay)", pixmaps);
     writer.string(title);
     writer.string(text);
-    void pixmaps;
   } else {
     throw new Error(`unsupported D-Bus signature: ${signature}`);
   }
@@ -179,6 +245,28 @@ const readValue = (reader: Reader, signature: string): unknown => {
   if (signature === "u") return reader.uint32();
   if (signature === "i") return reader.int32();
   if (signature === "b") return reader.uint32() !== 0;
+  if (signature === "v") {
+    const innerSignature = reader.signature();
+    return [innerSignature, readValue(reader, innerSignature)];
+  }
+  if (signature === "as") {
+    reader.pad(4);
+    const length = reader.uint32();
+    reader.pad(4);
+    const end = reader.offset + length;
+    const values: string[] = [];
+    while (reader.offset < end) values.push(reader.string());
+    return values;
+  }
+  if (signature === "ai") {
+    reader.pad(4);
+    const length = reader.uint32();
+    reader.pad(4);
+    const end = reader.offset + length;
+    const values: number[] = [];
+    while (reader.offset < end) values.push(reader.int32());
+    return values;
+  }
   throw new Error(`unsupported D-Bus read signature: ${signature}`);
 };
 
@@ -199,8 +287,9 @@ const createMessage = (
   bodyValues: unknown[] = [],
 ) => {
   const body = new Writer();
-  for (let index = 0; index < bodySignature.length; index += 1) {
-    writeValue(body, bodySignature[index], bodyValues[index]);
+  const bodyTypes = splitSignature(bodySignature);
+  for (let index = 0; index < bodyTypes.length; index += 1) {
+    writeValue(body, bodyTypes[index], bodyValues[index]);
   }
 
   const fieldBody = new Writer();
@@ -220,6 +309,32 @@ const createMessage = (
 
   const message = Buffer.concat([header, fieldBuffer, Buffer.alloc((8 - ((16 + fieldBuffer.length) % 8)) % 8), body.buffer()]);
   return message;
+};
+
+const splitSignature = (signature: string) => {
+  const parts: string[] = [];
+  for (let index = 0; index < signature.length; index += 1) {
+    const char = signature[index];
+    if (char === "a" && signature[index + 1] === "{") {
+      const end = signature.indexOf("}", index);
+      parts.push(signature.slice(index, end + 1));
+      index = end;
+    } else if (char === "a" && signature[index + 1] === "(") {
+      const end = signature.indexOf(")", index);
+      parts.push(signature.slice(index, end + 1));
+      index = end;
+    } else if (char === "a") {
+      parts.push(signature.slice(index, index + 2));
+      index += 1;
+    } else if (char === "(") {
+      const end = signature.indexOf(")", index);
+      parts.push(signature.slice(index, end + 1));
+      index = end;
+    } else {
+      parts.push(char);
+    }
+  }
+  return parts.filter(Boolean);
 };
 
 const parseMessage = (buffer: Buffer): Message => {

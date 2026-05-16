@@ -15,9 +15,10 @@ npm run build
 todoctl add "write service notes" --tag docs
 todoctl list
 todoctl start <target>
+todoctl hold <target> --reason "waiting on parts"
 todoctl done 1,2,write
-todoctl status-icon install
-todoctl status-icon run
+todoctl status install
+todoctl status
 todoctl --help
 ```
 
@@ -48,16 +49,22 @@ case-insensitive beginning of the task title. Numeric input only matches a
 numeric ID. Commas target more than one task for `start`, `hold`, `done`,
 `drop`, and `purge`.
 
+Held tasks can record why they are blocked with `todoctl hold <target> --reason
+"waiting on parts"`. The reason appears only while the task is currently held.
+
 When a task newly transitions to `done`, `todoctl` sends a desktop notification
 through `notify-send`.
 
-`todoctl status-icon run` starts a long-running KDE system tray icon with the
-current incomplete todo count drawn directly on the icon. It refreshes as the
-task log changes. Starting it again replaces the previous running tray icon so
-only one copy stays visible. It registers a KDE StatusNotifierItem over the user
-D-Bus session. `todoctl status-icon install` writes an autostart desktop entry
-so the tray icon starts on login, and `todoctl status-icon uninstall` removes
-that entry.
+`todoctl status` writes a systemd user unit and starts it with
+`systemctl --user restart todoctl-status.service`. The service runs a KDE
+system tray icon with the current incomplete todo count drawn directly on the
+icon, and refreshes as the task log changes. It registers a KDE
+StatusNotifierItem over the user D-Bus session. `todoctl status install`
+enables the systemd user service for future logins, and
+`todoctl status uninstall` disables and removes that service. The tray
+icon right-click menu also includes `Exit` and `Uninstall`; `Uninstall` removes
+the generated unit, legacy autostart entry, PID file, icon cache files, and
+resets the related systemd user service state.
 
 Data is stored as append-only JSON lines at:
 

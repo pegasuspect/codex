@@ -1,5 +1,5 @@
 import type { Event, Outcome, Task, TaskState } from "./model";
-import { installStatusIcon, notifyDone, runStatusIcon, uninstallStatusIcon } from "./desktop";
+import { installStatusIcon, notifyDone, runStatusIcon, runStatusIconForeground, uninstallStatusIcon } from "./desktop";
 import { loadEvents, saveEvent } from "./store";
 
 const terminal = new Set<TaskState>(["done", "removed"]);
@@ -23,11 +23,11 @@ export const commands = [
   { name: "list", usage: "list [--all]", description: "list active tasks" },
   { name: "ls", usage: "ls [--all]", description: "alias for list" },
   { name: "start", usage: "start <targets>", description: "mark tasks started" },
-  { name: "hold", usage: "hold <targets>", description: "hold tasks" },
+  { name: "hold", usage: "hold <targets> [--reason text]", description: "hold tasks" },
   { name: "done", usage: "done <targets>", description: "finish tasks and notify on new completions" },
   { name: "drop", usage: "drop <targets>", description: "remove tasks from active work" },
   { name: "purge", usage: "purge <targets>", description: "delete task history projection" },
-  { name: "status-icon", usage: "status-icon <run|install|uninstall>", description: "manage the tray count icon" },
+  { name: "status", usage: "status [run|install|uninstall]", description: "manage the tray count icon" },
   { name: "completion", usage: "completion zsh", description: "print shell completion script" },
 ] as const;
 
@@ -67,6 +67,11 @@ export const fold = (events: Event[]): Task[] => {
 
     task.updatedAt = event.at;
     task.state = statesByEvent[event.type];
+    if (event.type === "task.held") {
+      task.holdReason = event.reason;
+    } else {
+      delete task.holdReason;
+    }
   }
 
   return [...tasks.values()].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
@@ -75,17 +80,71 @@ export const fold = (events: Event[]): Task[] => {
 export const visible = (tasks: Task[], all = false) =>
   all ? tasks : tasks.filter((task) => !terminal.has(task.state));
 
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+const statusColor: Record<TaskState, string> = {
+  wanted: "\u001b[34m",
+  started: "\u001b[32m",
+  held: "\u001b[33m",
+  done: "\u001b[32m",
+  removed: "\u001b[31m",
+};
+
+const resetColor = "\u001b[0m";
+
+const statusLabel = (state: TaskState) => `${statusColor[state]}●${resetColor} ${capitalize(state)}`;
+
+const ansiPattern = /\u001b\[[0-9;]*m/g;
+
+const visibleLength = (value: string) => value.replace(ansiPattern, "").length;
+
+const tableCell = (value: string) => value.replaceAll(/\s+/g, " ").trim();
+
+const padCell = (value: string, width: number) => `${value}${" ".repeat(width - visibleLength(value))}`;
+
+const border = (widths: number[]) => `+${widths.map((width) => "-".repeat(width + 2)).join("+")}+`;
+
+const row = (values: string[], widths: number[]) =>
+  `| ${values.map((value, index) => padCell(value, widths[index])).join(" | ")} |`;
+
+const relativeTime = (timestamp: string) => {
+  const elapsed = Math.max(0, Date.now() - new Date(timestamp).getTime());
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const week = 7 * day;
+
+  if (elapsed < minute) return "now";
+  if (elapsed < hour) return `${Math.floor(elapsed / minute)}m ago`;
+  if (elapsed < day) return `${Math.floor(elapsed / hour)}h ago`;
+  if (elapsed < week) return `${Math.floor(elapsed / day)}d ago`;
+  return `${Math.floor(elapsed / week)}w ago`;
+};
+
 export const formatTasks = (tasks: Task[], all = false): string => {
   const rows = visible(tasks, all);
   if (!rows.length) return "No tasks.";
 
-  const width = Math.max(...rows.map((task) => task.id.length), 2);
-  return rows
-    .map((task) => {
-      const tags = task.tags.length ? ` #${task.tags.join(" #")}` : "";
-      return `${task.id.padEnd(width)}  ${task.state.padEnd(9)}  ${task.title}${tags}`;
-    })
-    .join("\n");
+  const includeReason = rows.some((task) => task.state === "held");
+  const headers = includeReason ? ["ID", "Status", "Updated", "Todo", "Reason"] : ["ID", "Status", "Updated", "Todo"];
+  const values = rows.map((task) => {
+    const tags = task.tags.length ? ` #${task.tags.join(" #")}` : "";
+    const cells = [task.id, statusLabel(task.state), relativeTime(task.updatedAt), tableCell(`${task.title}${tags}`)];
+    if (includeReason) cells.push(task.state === "held" ? tableCell(task.holdReason ?? "") : "");
+    return cells;
+  });
+  const widths = headers.map((header, index) =>
+    Math.max(visibleLength(header), ...values.map((cells) => visibleLength(cells[index]))),
+  );
+  const line = border(widths);
+
+  return [
+    line,
+    row(headers, widths),
+    line,
+    ...values.map((cells) => row(cells, widths)),
+    line,
+  ].join("\n");
 };
 
 const eventFor = (verb: string, id: string): Event | undefined => {
@@ -132,6 +191,24 @@ const parseAdd = (args: string[]) => {
   return { title: title.join(" ").trim(), tags };
 };
 
+const parseHold = (args: string[]) => {
+  const targets: string[] = [];
+  const reason: string[] = [];
+  let readingReason = false;
+
+  for (const arg of args) {
+    if (arg === "--reason" || arg === "-r") {
+      readingReason = true;
+    } else if (readingReason) {
+      reason.push(arg);
+    } else {
+      targets.push(arg);
+    }
+  }
+
+  return { targets, reason: reason.join(" ").trim() || undefined };
+};
+
 const zshQuote = (value: string) => value.replaceAll("\\", "\\\\").replaceAll("'", "'\\''");
 
 export const zshCompletion = () =>
@@ -159,10 +236,15 @@ export const zshCompletion = () =>
     "      _arguments \\",
     "        '(-a --all)'{-a,--all}'[show completed and removed tasks]'",
     "      ;;",
-    "    start|hold|done|drop|purge)",
+    "    start|done|drop|purge)",
     "      _message 'task id or title prefix'",
     "      ;;",
-    "    status-icon)",
+    "    hold)",
+    "      _arguments \\",
+    "        '(-r --reason)'{-r,--reason}'[record why the task is held]:reason:' \\",
+    "        '*:task id or title prefix:'",
+    "      ;;",
+    "    status)",
     "      _arguments '1:action:(run install uninstall)'",
     "      ;;",
     "    completion)",
@@ -182,11 +264,12 @@ export const runTaskCommand = (args: string[]): Outcome => {
     if (rest[0] === "zsh") return { code: 0, text: zshCompletion() };
     return { code: 2, text: "usage: todoctl completion zsh" };
   }
-  if (verb === "status-icon") {
-    if (rest[0] === "run") return runStatusIcon();
+  if (verb === "status" || verb === "status-icon") {
+    if (!rest[0] || rest[0] === "run") return runStatusIcon();
+    if (rest[0] === "service") return runStatusIconForeground();
     if (rest[0] === "install") return { code: 0, text: installStatusIcon() };
     if (rest[0] === "uninstall") return { code: 0, text: uninstallStatusIcon() };
-    return { code: 2, text: "usage: todoctl status-icon <run|install|uninstall>" };
+    return { code: 2, text: "usage: todoctl status [run|install|uninstall]" };
   }
 
   const events = loadEvents();
@@ -205,7 +288,8 @@ export const runTaskCommand = (args: string[]): Outcome => {
     return { code: 0, text: `added ${id}` };
   }
 
-  const targets = targetsFrom(rest);
+  const hold = verb === "hold" ? parseHold(rest) : undefined;
+  const targets = targetsFrom(hold?.targets ?? rest);
   if (!targets.length) return { code: 2, text: help };
 
   const resolved: Task[] = [];
@@ -219,6 +303,7 @@ export const runTaskCommand = (args: string[]): Outcome => {
   for (const task of resolved) {
     const event = eventFor(verb, task.id);
     if (!event) return { code: 2, text: help };
+    if (event.type === "task.held" && hold?.reason) event.reason = hold.reason;
     eventsToSave.push(event);
   }
 
