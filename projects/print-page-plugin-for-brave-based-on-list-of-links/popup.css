@@ -75,3 +75,39 @@ textarea:focus-visible {
   font-size: 13px;
   line-height: 1.4;
 }
+
+.results {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+  padding-top: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.results[hidden] {
+  display: none;
+}
+
+.results h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.results ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  max-height: 140px;
+  overflow: auto;
+  padding-left: 18px;
+}
+
+.results li {
+  overflow-wrap: anywhere;
+}
+
+.results .invalid {
+  color: #b42318;
+}

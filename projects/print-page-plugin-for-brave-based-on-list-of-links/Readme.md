@@ -40,3 +40,35 @@ Committed with:
 ```text
 Add Brave extension baseline
 ```
+
+## Phase 2: Link Input And Parsing
+
+### What changed?
+
+- Implemented link parsing in `popup.js`.
+- Accepted links separated by new lines, commas, whitespace, or a mixture of those separators.
+- Normalized valid `http` and `https` links through the browser `URL` parser.
+- Rejected invalid entries and unsupported protocols instead of silently dropping them.
+- Added a popup results section that shows valid links and invalid entries.
+
+### How to test it?
+
+1. Open `brave://extensions`.
+2. Click the reload button for `Link Batch Downloader`.
+3. Open the extension popup.
+4. Paste comma-separated links, such as `https://example.com/a, https://example.com/b`.
+5. Click `Prepare downloads` and confirm both links appear under `Valid links`.
+6. Paste newline-separated links and confirm they also appear under `Valid links`.
+7. Paste mixed input such as `https://example.com/a, not-a-link ftp://example.com/file`.
+8. Confirm `https://example.com/a` appears as valid and the other entries appear under `Invalid entries`.
+9. Confirm empty input still asks for one or more links.
+
+### Commit summary
+
+Phase 2 was tested and approved.
+
+Committed with:
+
+```text
+Parse and validate popup links
+```
