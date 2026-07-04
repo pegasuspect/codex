@@ -1,0 +1,77 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 340px;
+  background: Canvas;
+  color: CanvasText;
+}
+
+.panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+h1 {
+  border-bottom: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.25;
+  margin: 0;
+  padding-bottom: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+textarea {
+  width: 100%;
+  min-height: 156px;
+  resize: vertical;
+  border: 1px solid color-mix(in srgb, CanvasText 26%, transparent);
+  border-radius: 6px;
+  padding: 10px;
+  background: Canvas;
+  color: CanvasText;
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: ButtonText;
+  color: ButtonFace;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+}
+
+button:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid Highlight;
+  outline-offset: 2px;
+}
+
+.status {
+  min-height: 20px;
+  margin: 0;
+  color: color-mix(in srgb, CanvasText 72%, transparent);
+  font-size: 13px;
+  line-height: 1.4;
+}

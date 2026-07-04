@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Link Batch Downloader</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="panel">
+      <h1>Link Batch Downloader</h1>
+
+      <label class="field">
+        <span>Links</span>
+        <textarea id="links-input" rows="8" placeholder="https://example.com/file.pdf&#10;https://example.com/image.png"></textarea>
+      </label>
+
+      <button id="download-button" type="button">Prepare downloads</button>
+      <p id="status" class="status" role="status" aria-live="polite">Ready.</p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
