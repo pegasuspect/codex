@@ -3,6 +3,11 @@
   "name": "Link Batch Downloader",
   "description": "Collect a list of links and save them into a grouped Downloads folder.",
   "version": "0.1.0",
+  "permissions": [
+    "debugger",
+    "downloads",
+    "tabs"
+  ],
   "action": {
     "default_title": "Link Batch Downloader",
     "default_popup": "popup.html"

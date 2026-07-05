@@ -9,7 +9,7 @@
 
 body {
   margin: 0;
-  min-width: 340px;
+  min-width: 800px;
   background: Canvas;
   color: CanvasText;
 }
@@ -62,6 +62,11 @@ button {
   font-weight: 650;
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 button:focus-visible,
 textarea:focus-visible {
   outline: 2px solid Highlight;
@@ -95,13 +100,12 @@ textarea:focus-visible {
   font-weight: 700;
 }
 
-.results ul {
+.results ol {
   display: grid;
   gap: 4px;
   margin: 0;
   max-height: 140px;
   overflow: auto;
-  padding-left: 18px;
 }
 
 .results li {

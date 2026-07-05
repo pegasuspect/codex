@@ -2,6 +2,12 @@
 
 Link Batch Downloader is a Brave browser extension for collecting a list of URLs and saving the linked resources into a grouped folder under `~/Downloads`.
 
+## Warning: Download Prompt Setting
+
+The extension requests automatic saving with `saveAs: false`, but Brave's browser-level download setting can still force a save dialog for every PDF. If Brave keeps asking where to save each file, open `brave://settings/downloads` and turn off `Ask where to save each file before downloading`.
+
+The extension also uses Chromium's debugger API to generate PDF print output. Brave may show a debugger permission or debugging notice; extension code cannot suppress that browser-controlled warning.
+
 ## Phase 1: Discovery And Target Folder
 
 ### What changed?
@@ -71,4 +77,41 @@ Committed with:
 
 ```text
 Parse and validate popup links
+```
+
+## Phase 3: Download And Folder Naming
+
+### What changed?
+
+- Added the Manifest V3 `debugger`, `downloads`, and `tabs` permissions.
+- Implemented PDF output by opening each URL in a background tab, using Chromium's `Page.printToPDF` command, and saving the PDF with `chrome.downloads.download()`.
+- Determined the grouped folder name from the most frequently occurring valid link host.
+- Saved files into a subfolder of Brave's default download directory, which should be `~/Downloads` on a normal Linux desktop setup.
+- Named each PDF from the full escaped URL, using underscore escapes for encoded characters, such as `https_3A_2F_2Fexample.com_2Fpage.pdf`.
+- Used Brave's `uniquify` conflict handling if a PDF filename already exists.
+- Kept invalid entries visible while still downloading the valid links.
+- Disabled the popup button while PDFs are being generated and saved.
+
+### How to test it?
+
+1. Open `brave://extensions`.
+2. Click the reload button for `Link Batch Downloader`.
+3. If Brave asks for the new `debugger`, `downloads`, or `tabs` permissions, approve them.
+4. Open the extension popup.
+5. Paste real page URLs from at least two hosts, with one host appearing more often than the other.
+6. Click `Prepare downloads`.
+7. Confirm the popup reports progress and then says the PDFs were saved in `~/Downloads/<host>`.
+8. Open `~/Downloads` and confirm a folder named after the most frequent host was created.
+9. Confirm PDF files appear inside that folder.
+10. Confirm each PDF filename is the full escaped URL followed by `.pdf`, with encoded characters written as underscore escapes such as `_3A` and `_2F`.
+11. Test mixed input with one invalid entry and confirm the valid links still download while the invalid entry remains listed.
+
+### Commit summary
+
+Phase 3 was tested and approved.
+
+Committed with:
+
+```text
+Download links into host folder
 ```
