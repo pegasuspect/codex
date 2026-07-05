@@ -1,6 +1,6 @@
 # Link Batch Downloader
 
-Link Batch Downloader is a Brave browser extension for collecting a list of URLs and saving the linked resources into a grouped folder under `~/Downloads`.
+Link Batch Downloader is a Brave browser extension for collecting a list of URLs and saving the linked resources into a grouped folder under `~/Downloads` as pdf files.
 
 ## Warning: Download Prompt Setting
 
@@ -8,7 +8,35 @@ The extension requests automatic saving with `saveAs: false`, but Brave's browse
 
 The extension also uses Chromium's debugger API to generate PDF print output. Brave may show a debugger permission or debugging notice; extension code cannot suppress that browser-controlled warning.
 
-## Phase 1: Discovery And Target Folder
+## Usage
+
+1. Open `brave://extensions`.
+2. Enable `Developer mode`.
+3. Load this project folder as an unpacked extension.
+4. Open the `Link Batch Downloader` extension popup.
+5. Paste `http` or `https` URLs separated by commas, new lines, spaces, or a mixture of those separators.
+6. Click `Prepare downloads`.
+7. Find the generated PDFs under `~/Downloads/<most-frequent-host>/`.
+
+## Behavior
+
+- Valid links are shown in an ordered list before PDF generation starts.
+- Invalid entries remain visible and do not block valid links from being saved.
+- The output folder is named from the most frequently occurring URL host.
+- Each PDF filename is based on the full URL with filename-hostile characters replaced by dashes.
+- Existing files are not overwritten; Brave uniquifies conflicts.
+
+## Troubleshooting
+
+- If Brave asks where to save each PDF, disable `Ask where to save each file before downloading` at `brave://settings/downloads`.
+- If Brave shows a debugging notice, that is expected because the extension uses Chromium's PDF print command.
+- If a page requires sign-in, blocking protection, or interactive loading, the PDF output depends on what Brave can load in the temporary tab.
+- If a page takes too long to load, the extension reports a timeout instead of waiting forever.
+
+## Development Steps Taken
+
+<details>
+<summary>Phase 1: Discovery And Target Folder</summary>
 
 ### What changed?
 
@@ -47,7 +75,10 @@ Committed with:
 Add Brave extension baseline
 ```
 
-## Phase 2: Link Input And Parsing
+</details>
+
+<details>
+<summary>Phase 2: Link Input And Parsing</summary>
 
 ### What changed?
 
@@ -79,7 +110,10 @@ Committed with:
 Parse and validate popup links
 ```
 
-## Phase 3: Download And Folder Naming
+</details>
+
+<details>
+<summary>Phase 3: Download And Folder Naming</summary>
 
 ### What changed?
 
@@ -87,7 +121,7 @@ Parse and validate popup links
 - Implemented PDF output by opening each URL in a background tab, using Chromium's `Page.printToPDF` command, and saving the PDF with `chrome.downloads.download()`.
 - Determined the grouped folder name from the most frequently occurring valid link host.
 - Saved files into a subfolder of Brave's default download directory, which should be `~/Downloads` on a normal Linux desktop setup.
-- Named each PDF from the full escaped URL, using underscore escapes for encoded characters, such as `https_3A_2F_2Fexample.com_2Fpage.pdf`.
+- Named each PDF from the full URL with filename-hostile characters replaced by dashes.
 - Used Brave's `uniquify` conflict handling if a PDF filename already exists.
 - Kept invalid entries visible while still downloading the valid links.
 - Disabled the popup button while PDFs are being generated and saved.
@@ -103,7 +137,7 @@ Parse and validate popup links
 7. Confirm the popup reports progress and then says the PDFs were saved in `~/Downloads/<host>`.
 8. Open `~/Downloads` and confirm a folder named after the most frequent host was created.
 9. Confirm PDF files appear inside that folder.
-10. Confirm each PDF filename is the full escaped URL followed by `.pdf`, with encoded characters written as underscore escapes such as `_3A` and `_2F`.
+10. Confirm each PDF filename is based on the full URL followed by `.pdf`, with filename-hostile characters replaced by dashes.
 11. Test mixed input with one invalid entry and confirm the valid links still download while the invalid entry remains listed.
 
 ### Commit summary
@@ -115,3 +149,37 @@ Committed with:
 ```text
 Download links into host folder
 ```
+
+</details>
+
+<details>
+<summary>Phase 4: Docs, Verification, And Polish</summary>
+
+### What changed?
+
+- Added top-level usage, behavior, and troubleshooting documentation.
+- Documented the Brave download prompt setting and debugger warning where they are visible before the phase history.
+- Updated the filename documentation to match the current implementation.
+- Verified the JavaScript syntax and Manifest V3 JSON.
+
+### How to test it?
+
+1. Read the usage, behavior, and troubleshooting sections at the top of this file.
+2. Open `brave://extensions`.
+3. Reload `Link Batch Downloader`.
+4. Run one final test with comma-separated and newline-separated page URLs.
+5. Confirm PDFs are saved under `~/Downloads/<most-frequent-host>/`.
+6. Confirm the popup still reports invalid entries without blocking valid URLs.
+7. Confirm the documentation matches the behavior you see in Brave.
+
+### Commit summary
+
+Phase 4 was tested and approved.
+
+Committed with:
+
+```text
+Polish Brave extension documentation
+```
+
+</details>
