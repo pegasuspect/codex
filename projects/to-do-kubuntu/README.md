@@ -1,13 +1,55 @@
 # To-Do Kubuntu
 
+## Purpose
+
 A Kubuntu-native task program explored through ten deliberately different
 iterations before implementation.
 
-## Implemented Program
+## Status
+
+Implemented.
+
+## Architecture
 
 `todoctl` is a TypeScript Node CLI for Kubuntu. It refuses to run when
 `/etc/os-release` and the desktop session do not look like Kubuntu with KDE
 Plasma.
+
+Tasks use auto-incrementing numeric IDs. Commands can target the number or the
+case-insensitive beginning of the task title. Numeric input only matches a
+numeric ID. Commas target more than one task for `start`, `hold`, `done`,
+`drop`, and `purge`.
+
+Held tasks can record why they are blocked with `todoctl hold <target> --reason
+"waiting on parts"`. The reason appears only while the task is currently held.
+
+When a task newly transitions to `done`, `todoctl` sends a desktop notification
+through `notify-send`.
+
+`todoctl status` writes a systemd user unit and starts it with
+`systemctl --user restart todoctl-status.service`. The service runs a KDE
+system tray icon with the current incomplete todo count drawn directly on the
+icon, and refreshes as the task log changes. It registers a KDE
+StatusNotifierItem over the user D-Bus session. `todoctl status install`
+enables the systemd user service for future logins, and
+`todoctl status uninstall` disables and removes that service. The tray icon
+right-click menu also includes `Exit` and `Uninstall`; `Uninstall` removes the
+generated unit, legacy autostart entry, PID file, icon cache files, and resets
+the related systemd user service state.
+
+Data is stored as append-only JSON lines at:
+
+```text
+$XDG_DATA_HOME/to-do-kubuntu/events.jsonl
+```
+
+or, when `XDG_DATA_HOME` is not set:
+
+```text
+~/.local/share/to-do-kubuntu/events.jsonl
+```
+
+## Commands
 
 ```text
 npm install
@@ -44,41 +86,81 @@ autoload -Uz _todoctl
 compdef _todoctl todoctl
 ```
 
-Tasks use auto-incrementing numeric IDs. Commands can target the number or the
-case-insensitive beginning of the task title. Numeric input only matches a
-numeric ID. Commas target more than one task for `start`, `hold`, `done`,
-`drop`, and `purge`.
+## Testing
 
-Held tasks can record why they are blocked with `todoctl hold <target> --reason
-"waiting on parts"`. The reason appears only while the task is currently held.
-
-When a task newly transitions to `done`, `todoctl` sends a desktop notification
-through `notify-send`.
-
-`todoctl status` writes a systemd user unit and starts it with
-`systemctl --user restart todoctl-status.service`. The service runs a KDE
-system tray icon with the current incomplete todo count drawn directly on the
-icon, and refreshes as the task log changes. It registers a KDE
-StatusNotifierItem over the user D-Bus session. `todoctl status install`
-enables the systemd user service for future logins, and
-`todoctl status uninstall` disables and removes that service. The tray
-icon right-click menu also includes `Exit` and `Uninstall`; `Uninstall` removes
-the generated unit, legacy autostart entry, PID file, icon cache files, and
-resets the related systemd user service state.
-
-Data is stored as append-only JSON lines at:
+Run TypeScript verification:
 
 ```text
-$XDG_DATA_HOME/to-do-kubuntu/events.jsonl
+npm run typecheck
 ```
 
-or, when `XDG_DATA_HOME` is not set:
+Run a build before manual CLI checks:
 
 ```text
-~/.local/share/to-do-kubuntu/events.jsonl
+npm run build
 ```
 
-## Iteration 1 - Plasma Pinboard
+Manual testing should exercise add, list, start, hold, done, status install,
+status, status uninstall, drop, and purge against a temporary `XDG_DATA_HOME`.
+
+## Deployment
+
+This project deploys as a local CLI and optional systemd user service for the
+KDE tray status icon. Build with `npm run build`, install or link the package,
+then run `todoctl status install` from a Kubuntu Plasma session when tray
+integration is desired.
+
+## Security
+
+The CLI stores task data under the user's XDG data directory and writes only
+user-level systemd service files for the tray status feature. It does not
+require root permissions.
+
+## Plan
+
+<details>
+<summary>Decision: Todoctl for Kubuntu</summary>
+
+### Goal
+
+Implement a Kubuntu-native task program that feels like a local Unix utility
+instead of a generic productivity app.
+
+### Decisions
+
+- Gate startup on Kubuntu and KDE Plasma environment checks.
+- Store task state as append-only JSON lines under the user's XDG data
+  directory.
+- Use package-like verbs: add, list, start, hold, done, drop, and purge.
+- Add a KDE system tray status service through user-level systemd rather than a
+  heavier Plasma widget.
+- Keep earlier design iterations in collapsible records so the README documents
+  the explored options without burying the implemented program.
+
+### Changes
+
+- Implemented the `todoctl` TypeScript Node CLI.
+- Added shell completion output for zsh.
+- Added desktop notifications for newly completed tasks.
+- Added `todoctl status` service management and KDE tray status behavior.
+
+### Verification
+
+- Run `npm run typecheck`.
+- Run `npm run build`.
+- Manually exercise CLI state transitions against a temporary `XDG_DATA_HOME`.
+- Test `todoctl status install`, `todoctl status`, and
+  `todoctl status uninstall` from a Kubuntu Plasma session.
+
+### Result
+
+Implemented as the current project direction after the ten design iterations
+below.
+
+</details>
+
+<details>
+<summary>Iteration 1 - Plasma Pinboard</summary>
 
 Tasks are not rows. They are small "plasmoids" grouped by the KDE surface they
 belong to: panel, launcher, desktop, terminal, browser, and files.
@@ -104,7 +186,10 @@ This starts from Kubuntu's workspace metaphor instead of a generic inbox.
 The task list behaves like a memory of the Plasma desktop, not a calendar,
 Kanban board, or plain checklist.
 
-## Iteration 2 - Apt Errand Ledger
+</details>
+
+<details>
+<summary>Iteration 2 - Apt Errand Ledger</summary>
 
 Tasks are modeled like local package operations: wanted, started, held,
 removed, and purged.
@@ -132,7 +217,10 @@ This replaces desktop geography with Debian package lifecycle language.
 It borrows Kubuntu's underlying system vocabulary, so the list feels like a
 personal `apt` database rather than a productivity app.
 
-## Iteration 3 - Dolphin Breadcrumb Queue
+</details>
+
+<details>
+<summary>Iteration 3 - Dolphin Breadcrumb Queue</summary>
 
 Every task has a path, such as `home/life/taxes/scan-receipts`; focus moves by
 folder-like breadcrumbs.
@@ -159,7 +247,10 @@ This discards package states and turns work into navigable file-manager space.
 It makes task organization feel like Dolphin traversal, where location is the
 main interaction primitive.
 
-## Iteration 4 - KRunner Sparks
+</details>
+
+<details>
+<summary>Iteration 4 - KRunner Sparks</summary>
 
 Tasks are tiny commands that can be searched, previewed, and fired like KRunner
 matches.
@@ -185,7 +276,10 @@ This replaces path navigation with fast command discovery.
 
 The app is less a list and more a local command palette for obligations.
 
-## Iteration 5 - Konsole Scrollback Oath
+</details>
+
+<details>
+<summary>Iteration 5 - Konsole Scrollback Oath</summary>
 
 Tasks are treated like shell history lines with an oath: anything entered must
 either be replayed, commented out, or resolved.
@@ -212,7 +306,10 @@ This moves from searchable actions to an append-only terminal history model.
 The task database becomes an auditable shell scrollback instead of mutable app
 state.
 
-## Iteration 6 - System Settings Matrix
+</details>
+
+<details>
+<summary>Iteration 6 - System Settings Matrix</summary>
 
 Tasks are arranged like settings modules: appearance, network, hardware,
 accounts, updates, and behavior.
@@ -239,7 +336,10 @@ This trades terminal history for a control-center model.
 It treats personal work as a configurable operating environment, not a stream
 of commands or files.
 
-## Iteration 7 - Notification Shade Treaty
+</details>
+
+<details>
+<summary>Iteration 7 - Notification Shade Treaty</summary>
 
 Tasks expire into quiet, normal, or urgent lanes, mirroring desktop notification
 pressure without using alarms as the main feature.
@@ -265,7 +365,10 @@ This drops module organization and focuses on attention pressure.
 It uses the emotional rhythm of KDE notifications, but turns that rhythm into
 task ordering instead of popups.
 
-## Iteration 8 - Muon Archive Garden
+</details>
+
+<details>
+<summary>Iteration 8 - Muon Archive Garden</summary>
 
 Tasks are bundled into named archives that can be unpacked for a day and packed
 away again when inactive.
@@ -292,7 +395,10 @@ This abandons notification pressure for archive movement.
 It treats deferred work like local resources that can be packed and unpacked
 without pretending everything belongs in today's list.
 
-## Iteration 9 - Journalctl Promise Stream
+</details>
+
+<details>
+<summary>Iteration 9 - Journalctl Promise Stream</summary>
 
 Every task is an event. The app reads the event stream and prints current
 truth, much like `journalctl` reads logs and filters units.
@@ -319,7 +425,10 @@ This changes archives into a log-native design with derived state.
 The current list is never the source of truth; the promise stream is. That
 makes it feel like a small user-space Unix service.
 
-## Iteration 10 - Todoctl for Kubuntu
+</details>
+
+<details>
+<summary>Iteration 10 - Todoctl for Kubuntu</summary>
 
 The final design is `todoctl`: a Kubuntu-gated Unix-style task utility. Tasks
 are stored as append-only JSON events under the user's config directory. User
@@ -358,3 +467,5 @@ startup rather than documentation, which makes the environment contract real.
 The event log is simple, inspectable, and durable. The package-like verbs make
 tasks feel started, held, removed, or purged from a user's working system,
 which embeds the idea in Kubuntu's Debian foundation.
+
+</details>

@@ -253,6 +253,76 @@ Run dependency vulnerability checks before release and on a scheduled cadence:
 npm audit
 ```
 
+## Plan
+
+<details>
+<summary>Decision: User-local launcher override</summary>
+
+### Goal
+
+Replace Kubuntu/KDE Plasma launcher icons without changing system files.
+
+### Decisions
+
+- Copy system `.desktop` entries into `~/.local/share/applications`.
+- Store generated and downloaded icons under user-local XDG paths.
+- Refresh KDE's service cache with `kbuildsycoca5` or `kbuildsycoca6` when
+  available.
+- Avoid direct panel configuration edits because those are more fragile across
+  Plasma versions.
+
+### Changes
+
+- Implemented the phase 1 command for applying a custom Firefox launcher icon.
+- Added dry-run support so planned filesystem changes can be inspected first.
+
+### Verification
+
+- Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and
+  `npm audit`.
+- Run `npm run phase1:dry-run` before applying the icon.
+
+### Result
+
+Implemented as the baseline icon replacement path.
+
+</details>
+
+<details>
+<summary>Decision: Firefox Spotify artwork bridge</summary>
+
+### Goal
+
+Keep the Firefox launcher icon aligned with Spotify Web Player artwork when
+Spotify MPRIS metadata is unavailable or incomplete.
+
+### Decisions
+
+- Use a Firefox WebExtension on `https://open.spotify.com/*` to detect artwork.
+- Send artwork state to a native messaging host.
+- Let a user-level systemd service run the watcher inside the KDE session.
+- Restore the original Firefox icon when playback stops, Firefox disconnects,
+  or the watcher exits.
+
+### Changes
+
+- Added extension packaging, native host installation, and watcher commands.
+- Added service installation through `install-service.zsh`.
+
+### Verification
+
+- Run `npm run package:firefox` and load the generated XPI or temporary
+  extension.
+- Run `npm run watch-firefox:dry-run` before enabling the live watcher.
+- Inspect service logs with
+  `journalctl --user -u kubuntu-icon-switcher.service -f`.
+
+### Result
+
+Implemented as the preferred Spotify artwork update path.
+
+</details>
+
 ## Notes
 
 Panel launchers may need to be unpinned and pinned again if Plasma has cached a
