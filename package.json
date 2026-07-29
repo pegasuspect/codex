@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@aerovato/container": "^3.5.1"
+  }
+}
