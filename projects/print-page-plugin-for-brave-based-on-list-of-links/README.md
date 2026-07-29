@@ -51,9 +51,11 @@ Manual test flow:
 4. Open the `Link Batch Downloader` extension popup.
 5. Paste `http` or `https` URLs separated by commas, new lines, spaces, or a
    mixture of those separators.
-6. Click `Prepare downloads`.
-7. Confirm valid links appear in order and invalid entries remain visible.
-8. Confirm generated PDFs are saved under `~/Downloads/<most-frequent-host>/`.
+6. Choose how many tabs to process in parallel. The default and minimum is
+   three. The `Max` position opens every valid link at once.
+7. Click `Prepare downloads`.
+8. Confirm valid links appear in order and invalid entries remain visible.
+9. Confirm generated PDFs are saved under `~/Downloads/<most-frequent-host>/`.
 
 ## Deployment
 
@@ -72,9 +74,32 @@ browser-level download setting can still force a save dialog for every PDF. If
 Brave keeps asking where to save each file, open `brave://settings/downloads`
 and turn off `Ask where to save each file before downloading`.
 
+The extension waits for the initial page load and then for the page's text,
+height, element count, images, links, and loaded resources to stop changing
+before printing. This readiness check is the same for every website and does
+not depend on site-specific routes, selectors, or page text.
+
+The parallel-tabs slider processes three through nine tabs concurrently. Its
+final `Max` position removes the concurrency limit and opens all valid links at
+once. When Max is selected with more than three valid links, the popup warns
+that the resulting tabs may slow down the system or crash the browser.
+
 If a page requires sign-in, blocking protection, or interactive loading, the
-PDF output depends on what Brave can load in the temporary tab. If a page takes
-too long to load, the extension reports a timeout instead of waiting forever.
+PDF output still depends on what Brave can load in the temporary tab. If the
+initial load or dynamic content takes longer than 45 seconds, the extension
+reports which readiness phase timed out instead of printing a known-incomplete
+page.
+
+## Dynamic Page Verification
+
+After reloading the unpacked extension, test a dynamically rendered page and
+confirm:
+
+1. The status changes to `Preparing page ... for printing`.
+2. The generated PDF contains the job listings, not only the page shell.
+3. A normal static page still prints after a short settling period.
+4. A page whose dynamic content never becomes ready reports a timeout and does
+   not save a partial PDF.
 
 ## Plan
 

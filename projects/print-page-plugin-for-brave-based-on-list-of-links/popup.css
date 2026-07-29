@@ -50,6 +50,38 @@ textarea {
   line-height: 1.35;
 }
 
+.concurrency-control {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.concurrency-control label {
+  display: flex;
+  justify-content: space-between;
+}
+
+.concurrency-control input {
+  width: 100%;
+}
+
+.warning {
+  margin: 0;
+  border: 1px solid #d97706;
+  border-radius: 6px;
+  padding: 8px;
+  background: color-mix(in srgb, #f59e0b 16%, Canvas);
+  color: CanvasText;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.warning[hidden] {
+  display: none;
+}
+
 button {
   min-height: 36px;
   border: 0;

@@ -4,6 +4,9 @@ const linksInput = document.querySelector("#links-input");
 const downloadButton = document.querySelector("#download-button");
 const statusMessage = document.querySelector("#status");
 const parseResults = document.querySelector("#parse-results");
+const concurrencySlider = document.querySelector("#concurrency-slider");
+const concurrencyValue = document.querySelector("#concurrency-value");
+const concurrencyWarning = document.querySelector("#concurrency-warning");
 const downloadsApi = chrome.downloads;
 const debuggerApi = chrome.debugger;
 const tabsApi = chrome.tabs;
@@ -52,6 +55,29 @@ function renderParseResults(validLinks, invalidEntries) {
   }
 
   parseResults.hidden = validLinks.length === 0 && invalidEntries.length === 0;
+}
+
+function isMaximumConcurrencySelected() {
+  return concurrencySlider.value === concurrencySlider.max;
+}
+
+function getConcurrencyLimit() {
+  if (isMaximumConcurrencySelected()) {
+    return Infinity;
+  }
+
+  return Number.parseInt(concurrencySlider.value, 10);
+}
+
+function updateConcurrencyControl() {
+  const validLinkCount = parseLinks(linksInput.value).validLinks.length;
+  const isMaximum = isMaximumConcurrencySelected();
+
+  concurrencyValue.value = isMaximum ? "Max" : concurrencySlider.value;
+  concurrencyWarning.hidden = !isMaximum || validLinkCount <= 3;
+  concurrencyWarning.textContent =
+    `This setting will open ${validLinkCount} tabs and can slow down your ` +
+    "system or crash the whole browser! Use with caution.";
 }
 
 function createResultGroup(title, entries, className) {
@@ -161,20 +187,45 @@ function removeTab(tabId) {
 
 function waitForTabComplete(tabId) {
   return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      tabsApi.onUpdated.removeListener(listener);
-      reject(new Error("Timed out waiting for page load."));
-    }, 45000);
+    let settled = false;
 
-    function listener(updatedTabId, changeInfo) {
-      if (updatedTabId === tabId && changeInfo.status === "complete") {
-        clearTimeout(timeoutId);
-        tabsApi.onUpdated.removeListener(listener);
+    function finish(error) {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeoutId);
+      tabsApi.onUpdated.removeListener(listener);
+
+      if (error) {
+        reject(error);
+      } else {
         resolve();
       }
     }
 
+    const timeoutId = setTimeout(() => {
+      finish(new Error("Timed out waiting for the initial page load."));
+    }, 45000);
+
+    function listener(updatedTabId, changeInfo) {
+      if (updatedTabId === tabId && changeInfo.status === "complete") {
+        finish();
+      }
+    }
+
     tabsApi.onUpdated.addListener(listener);
+
+    tabsApi.get(tabId, (tab) => {
+      const error = chrome.runtime.lastError;
+
+      if (error) {
+        finish(new Error(error.message));
+      } else if (tab.status === "complete") {
+        finish();
+      }
+    });
   });
 }
 
@@ -216,6 +267,74 @@ function sendDebuggerCommand(tabId, method, params = {}) {
   });
 }
 
+function delay(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+async function getPageReadinessState(tabId) {
+  const result = await sendDebuggerCommand(tabId, "Runtime.evaluate", {
+    expression: `(() => {
+      const body = document.body;
+      const text = body?.innerText ?? "";
+
+      return {
+        documentComplete: document.readyState === "complete",
+        signature: [
+          text.length,
+          body?.scrollHeight ?? 0,
+          document.querySelectorAll("*").length,
+          document.images.length,
+          document.links.length,
+          performance.getEntriesByType("resource").length
+        ].join(":")
+      };
+    })()`,
+    returnByValue: true
+  });
+
+  return result.result.value;
+}
+
+async function waitForPageReady(tabId) {
+  const timeoutMilliseconds = 45000;
+  const pollMilliseconds = 750;
+  const minimumSettleMilliseconds = 3000;
+  const requiredStableChecks = 4;
+  const startedAt = Date.now();
+  let previousSignature = "";
+  let stableChecks = 0;
+
+  while (Date.now() - startedAt < timeoutMilliseconds) {
+    const state = await getPageReadinessState(tabId);
+
+    if (state.documentComplete && state.signature === previousSignature) {
+      stableChecks += 1;
+    } else {
+      stableChecks = 0;
+    }
+
+    previousSignature = state.signature;
+
+    const hasSettledLongEnough =
+      Date.now() - startedAt >= minimumSettleMilliseconds;
+
+    if (
+      hasSettledLongEnough &&
+      stableChecks >= requiredStableChecks
+    ) {
+      return;
+    }
+
+    await delay(pollMilliseconds);
+  }
+
+  throw new Error(
+    "Timed out waiting for the page's dynamic content to finish rendering."
+  );
+}
+
 function printTabToPdf(tabId) {
   return sendDebuggerCommand(tabId, "Page.printToPDF", {
     printBackground: true,
@@ -231,6 +350,8 @@ async function printUrlToPdfDataUrl(link) {
     await waitForTabComplete(tab.id);
     await attachDebugger(tab.id);
     isDebuggerAttached = true;
+    await sendDebuggerCommand(tab.id, "Runtime.enable");
+    await waitForPageReady(tab.id);
 
     const pdf = await printTabToPdf(tab.id);
     return `data:application/pdf;base64,${pdf.data}`;
@@ -243,20 +364,51 @@ async function printUrlToPdfDataUrl(link) {
   }
 }
 
-async function startDownloads(validLinks) {
+async function startDownloads(validLinks, concurrencyLimit) {
   const folderName = sanitizePathPart(getMostFrequentHost(validLinks)) || "link-downloads";
   let completedCount = 0;
+  let nextIndex = 0;
+  const workerCount = Math.min(concurrencyLimit, validLinks.length);
+  const failures = [];
 
   downloadButton.disabled = true;
 
   try {
-    for (const [index, link] of validLinks.entries()) {
-      const filename = `${folderName}/${getPdfFileName(link)}`;
-      const pdfDataUrl = await printUrlToPdfDataUrl(link);
+    async function processNextLink() {
+      while (nextIndex < validLinks.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        const link = validLinks[index];
+        const filename = `${folderName}/${getPdfFileName(link)}`;
 
-      statusMessage.textContent = `Saving PDF ${index + 1} of ${validLinks.length} to ${folderName}...`;
-      await downloadLink(pdfDataUrl, filename);
-      completedCount += 1;
+        statusMessage.textContent =
+          `Preparing ${workerCount} page(s) in parallel; ` +
+          `${completedCount} of ${validLinks.length} saved...`;
+
+        try {
+          const pdfDataUrl = await printUrlToPdfDataUrl(link);
+
+          await downloadLink(pdfDataUrl, filename);
+          completedCount += 1;
+        } catch (error) {
+          failures.push({ link, error });
+        }
+
+        statusMessage.textContent =
+          `Saved ${completedCount} of ${validLinks.length} PDF(s) ` +
+          `to ${folderName}...`;
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: workerCount }, () => processNextLink())
+    );
+
+    if (failures.length > 0) {
+      throw new Error(
+        `${failures.length} of ${validLinks.length} PDF(s) failed. ` +
+        `First failure: ${failures[0].error.message}`
+      );
     }
 
     statusMessage.textContent = `Saved ${completedCount} PDF(s) in ~/Downloads/${folderName}.`;
@@ -285,8 +437,12 @@ downloadButton.addEventListener("click", async () => {
   }
 
   try {
-    await startDownloads(validLinks);
+    await startDownloads(validLinks, getConcurrencyLimit());
   } catch (error) {
     statusMessage.textContent = `Download failed: ${error.message}`;
   }
 });
+
+linksInput.addEventListener("input", updateConcurrencyControl);
+concurrencySlider.addEventListener("input", updateConcurrencyControl);
+updateConcurrencyControl();

@@ -15,6 +15,22 @@
         <textarea id="links-input" rows="8" placeholder="https://example.com/file.pdf&#10;https://example.com/image.png"></textarea>
       </label>
 
+      <div class="concurrency-control">
+        <label for="concurrency-slider">
+          Parallel tabs:
+          <output id="concurrency-value" for="concurrency-slider">3</output>
+        </label>
+        <input
+          id="concurrency-slider"
+          type="range"
+          min="3"
+          max="10"
+          value="3"
+          step="1"
+        >
+        <p id="concurrency-warning" class="warning" role="alert" hidden></p>
+      </div>
+
       <button id="download-button" type="button">Prepare downloads</button>
       <p id="status" class="status" role="status" aria-live="polite">Ready.</p>
       <section id="parse-results" class="results" aria-live="polite" hidden></section>
